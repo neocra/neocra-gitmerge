@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0;netcoreapp3.1</TargetFrameworks>
+    <RootNamespace>Fabrikam.Card.Services</RootNamespace> 
+	<IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net5.0'">
+    <PackageReference Include="Fabrikam.Core.Service.ServiceBus" Version="5.1.0-beta.11" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1'">
+    <PackageReference Include="Fabrikam.Core.Service.ServiceBus" Version="3.1.0-beta.11" />
+	<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fabrikam.User.Domain" Version="1.3.47" />
+    <PackageReference Include="Fabrikam.Core.Service.AzureStorage" Version="5.2.0-alpha.2" />
+    <PackageReference Include="Fabrikam.Billing.Domain" Version="0.2.29" />
+    <PackageReference Include="Fabrikam.Exceptions" Version="1.0.44" />
+    <PackageReference Include="Fabrikam.Journey.Domain" Version="2.5.32" />
+    <PackageReference Include="Fabrikam.Partner.Domain" Version="0.1.7" />
+    <PackageReference Include="Fabrikam.Platform.Api.Client" Version="1.0.44" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fabrikam.Card.Domain\Fabrikam.Card.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

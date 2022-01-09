@@ -1,0 +1,40 @@
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: |
+            5.0.x
+            6.0.x
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.10
+        with:
+          versionSpec: '5.x'
+      - name: GitTools
+        uses: gittools/actions/gitversion/execute@v0.9.10
+        with:
+          updateAssemblyInfo: true
+      - name: Build
+        run: dotnet build --configuration Release /p:Version=${GitVersion_SemVer}
+      - name: Test
+        run: dotnet test --configuration Release /p:Version=${GitVersion_SemVer} --no-build
+      - name: Pack
+        run: dotnet pack --configuration Release /p:Version=${GitVersion_SemVer} --no-build --output .
+      - name: Push
+        run: dotnet nuget push *.nupkg --source https://nuget.pkg.github.com/neocra/index.json --api-key ${GITHUB_TOKEN}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push
+        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${NUGET_TOKEN}
+        env:
+          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}

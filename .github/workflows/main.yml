@@ -1,0 +1,48 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: |
+            5.0.x
+            6.0.x
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.10
+        with:
+          versionSpec: '5.x'
+      - name: GitTools
+        uses: gittools/actions/gitversion/execute@v0.9.10
+        with:
+          updateAssemblyInfo: true
+      - name: Install sonarscanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Begin scan
+        run: dotnet sonarscanner begin /k:"neocra-gitmerge" /o:"neocra-github" /d:sonar.host.url=https://sonarcloud.io /d:sonar.login="$SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Build
+        run: dotnet build --configuration Release
+      - name: Test
+        run: dotnet test --configuration Release --no-build  --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Copy coverage
+        run: cp Neocra.GitMerge.Tests/TestResults/*/coverage.opencover.xml .
+      - name: End scan
+        run: dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

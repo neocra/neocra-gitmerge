@@ -1,0 +1,57 @@
+using System;
+using System.Collections.Generic;
+using Fabrikam.Client;
+using Pattern.Synchro.Client;
+
+namespace Fabrikam.Api
+{
+    public class Customer : IEntity
+    {
+        public Guid Id { get; set; }
+        
+        public DateTime LastUpdated { get; set; }
+
+        public bool IsDeleted { get; set; }
+
+        public string? LastName { get; set; }
+        
+        public string? FirstName { get; set; }
+
+        public string? Address { get; set; }
+         
+        public string? Phone { get; set; }
+
+        public string? Comment { get; set; }
+        
+        public double? Altitude { get; set; }
+        
+        public double? Latitude { get; set; }
+        
+        public double? Longitude { get; set; }
+        
+        public string? AddressComplement { get; set; }
+        
+        public Guid CreatedAccountId { get; set; }
+
+        public Account CreatedAccount { get; set; } = null!;
+
+        public bool IsArchived { get; set; }
+        
+        public DateTime? ArchivedDate { get; set; }
+
+        public Guid? FabrikamOfficeId { get; set; }
+
+        public FabrikamOffice? FabrikamOffice { get; set; }
+        public string? AlternatePhone1 { get; set; }
+        public string? AlternatePhone2 { get; set; }
+        public string? AlternatePhone3 { get; set; }
+        public string? AlternatePhoneName1 { get; set; }
+        public string? AlternatePhoneName2 { get; set; }
+        public string? AlternatePhoneName3 { get; set; }
+        public CustomerGender? Gender { get; set; }
+        public int? Age { get; set; }
+        public string? Email { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime? DeletedDate { get; set; }
+    }
+}
