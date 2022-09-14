@@ -1,6 +1,6 @@
 namespace Neocra.GitMerge.Csharp
 {
-    public interface ISyntaxList<T, TCollection>
+    public interface ISyntaxList<in T, out TCollection>
     {
         int Count { get; }
         

@@ -149,16 +149,4 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             return new StatementDiff(mode, index, 0, elements[index]);
         }
     }
-
-    // public class BinaryExpressionDiff : ExpressionDiff
-    // {
-    //     public List<Diff> ChildrenLeft { get; }
-    //     public List<Diff> ChildrenRight { get; }
-    //
-    //     public BinaryExpressionDiff(DiffMode mode, int indexOfChild, int moveIndexOfChild, ExpressionSyntax value, List<Diff> childrenLeft, List<Diff> childrenRight) : base(mode, indexOfChild, moveIndexOfChild, value, children)
-    //     {
-    //         this.ChildrenLeft = childrenLeft;
-    //         this.ChildrenRight = childrenRight;
-    //     }
-    // }
 }

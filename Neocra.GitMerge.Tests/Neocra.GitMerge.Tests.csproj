@@ -32,8 +32,5 @@
         <None Update="automatic-ignore\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="automatic-ignore\MapMiddleware.cs\result">
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
     </ItemGroup>
 </Project>
