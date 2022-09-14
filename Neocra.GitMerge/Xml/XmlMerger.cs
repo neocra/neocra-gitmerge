@@ -97,6 +97,8 @@ namespace Neocra.GitMerge.Xml
             
             switch (diffCurrent.Mode, diffOther.Mode)
             {
+                case (DiffMode.Delete, DiffMode.Update):
+                    return false;
                 case (DiffMode.Update, DiffMode.Update):
                     if (diffCurrent.Children != null && diffOther.Children != null)
                     {
@@ -117,6 +119,11 @@ namespace Neocra.GitMerge.Xml
                     diffsOther.Remove(diffOther);
                     break;
                 case (DiffMode.Add, DiffMode.Add):
+                    break;
+                case (DiffMode.Move, DiffMode.Add):
+                    break;
+                case (DiffMode.Update, DiffMode.Add):
+                case (DiffMode.Add, DiffMode.Update):
                     break;
                 case (DiffMode.Move, DiffMode.Move):
                     if (diffCurrent.Index != diffOther.Index
@@ -149,7 +156,7 @@ namespace Neocra.GitMerge.Xml
             this.ApplyDiff2(diffOther, xmlNamespaceResolver, currentRoot);
         }
 
-        private void ApplyDiff2(List<XmlDiff> diffOther, XmlNamespaceManager xmlNamespaceResolver, XElement currentRoot, XElement? parentElement = null)
+        private void ApplyDiff2(List<XmlDiff> diffOther, XmlNamespaceManager xmlNamespaceResolver, XElement parent)
         {
             var move = (from d in diffOther
                 where d.Mode == DiffMode.Move
@@ -182,14 +189,6 @@ namespace Neocra.GitMerge.Xml
                     diff.MoveIndex + countMoveIndex,
                     diffIndexOfChild,
                     diff.MoveIndexOfChild + countMoveIndexOfChild));
-
-                var parentPath = GetElementPathWithMove(diff, move, diff.ParentPath);
-                var parent = parentElement ?? currentRoot.XPathSelectElement(parentPath, xmlNamespaceResolver);
-
-                if (parent == null)
-                {
-                    throw new NotSupportedException();
-                }
                 
                 switch (diff)
                 {
@@ -253,7 +252,7 @@ namespace Neocra.GitMerge.Xml
                             .ElementAt(diffIndexOfChild);
                         if (diff.Children != null)
                         {
-                            ApplyDiff2(diff.Children, xmlNamespaceResolver, element, element);
+                            this.ApplyDiff2(diff.Children, xmlNamespaceResolver, element);
                         }
                         break;
                     case {Mode: DiffMode.Update, Value: XText text}:
@@ -278,24 +277,6 @@ namespace Neocra.GitMerge.Xml
             {
                 parent.Add(obj);
             }
-        }
-
-        private static string GetElementPathWithMove(XmlDiff diff, Dictionary<string, string> move, string elementPath)
-        {
-
-            if (diff.Mode != DiffMode.Move)
-            {
-                foreach (var key in move.Keys)
-                {
-                    if (elementPath.Contains(key))
-                    {
-                        elementPath = elementPath.Replace(key, move[key]);
-                        break;
-                    }
-                }
-            }
-
-            return elementPath;
         }
 
         private static int GetCountIndexOfElement(List<XmlDiff> diffOther, XmlDiff xmlDiff, int diffIndex)
@@ -357,6 +338,7 @@ namespace Neocra.GitMerge.Xml
 
         public IEnumerable<XmlDiff> Diff(XmlNamespaceManager xmlNamespaceResolver, XElement ancestor, XElement current, string parentPath, int index)
         {
+            var children = new List<XmlDiff>();
             var path = XmlDiff.GetXPathOfElement(xmlNamespaceResolver, ancestor, parentPath, index);
             if (ancestor.Name != current.Name)
             {

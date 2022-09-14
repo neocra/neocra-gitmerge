@@ -7,5 +7,6 @@ namespace Neocra.GitMerge.Csharp
         TCollection Insert(int index, T value);
 
         TCollection RemoveAt(int index);
+        TCollection Move(int index, int movedIndex);
     }
 }

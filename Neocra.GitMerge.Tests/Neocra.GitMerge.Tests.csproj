@@ -13,7 +13,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="coverlet.collector" Version="3.0.2">
+        <PackageReference Include="coverlet.collector" Version="3.1.2">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
@@ -24,40 +24,7 @@
     </ItemGroup>
     
     <ItemGroup>
-      <Folder Include="automatic" />
-    </ItemGroup>
-    
-    <ItemGroup>
         <Compile Remove="automatic\**\*.cs" />
-        <Compile Include="automatic-ignore\BaseTests.cs\BaseTests.cs" />
-        <Compile Include="automatic-ignore\BootStrapTests.cs\BootStrapTests.cs" />
-        <Compile Include="automatic-ignore\ChargingActiveSessionViewModel.cs\ChargingActiveSessionViewModel.cs" />
-        <Compile Include="automatic-ignore\CompleteSessionViewModel.cs\CompleteSessionViewModel.cs" />
-        <Compile Include="automatic-ignore\ConditionalProxyMiddleware.cs\ConditionalProxyMiddleware.cs" />
-        <Compile Include="automatic-ignore\FabrikamMapPin.cs\BeMoMapPin.cs" />
-        <Compile Include="automatic-ignore\FabrikamMapRenderer.cs\BeMoMapRenderer.cs" />
-        <Compile Include="automatic-ignore\Header.xaml.cs\Header.xaml.cs" />
-        <Compile Include="automatic-ignore\HttpMethodOverrideMiddleware.cs\HttpMethodOverrideMiddleware.cs" />
-        <Compile Include="automatic-ignore\ListCustomersViewModel.cs\ListCustomersViewModel.cs" />
-        <Compile Include="automatic-ignore\ListCustomersViewModelTests.cs\ListCustomersViewModelTests.cs" />
-        <Compile Include="automatic-ignore\ListCustomersViewModelTestsWithMedicalOffice.cs\ListCustomersViewModelTestsWithMedicalOffice.cs" />
-        <Compile Include="automatic-ignore\MainActivity.cs\MainActivity.cs" />
-        <Compile Include="automatic-ignore\MapMiddleware.cs\MapMiddleware.cs" />
-        <Compile Include="automatic-ignore\MapViewModel.cs\MapViewModel.cs" />
-        <Compile Include="automatic-ignore\MapViewModelTests.cs\MapViewModelTests.cs" />
-        <Compile Include="automatic-ignore\MigrationsEndPointMiddleware.cs\MigrationsEndPointMiddleware.cs" />
-        <Compile Include="automatic-ignore\PlaceDetailViewModel.cs\PlaceDetailViewModel.cs" />
-        <Compile Include="automatic-ignore\PlugVehicleViewModel.cs\PlugVehicleViewModel.cs" />
-        <Compile Include="automatic-ignore\PresentationModule.cs\PresentationModule.cs" />
-        <Compile Include="automatic-ignore\ResponseCompressionMiddleware.cs\ResponseCompressionMiddleware.cs" />
-        <Compile Include="automatic-ignore\SessionsViewModel.cs\SessionsViewModel.cs" />
-        <Compile Include="automatic-ignore\SessionViewModel.cs\SessionViewModel.cs" />
-        <Compile Include="automatic-ignore\SignInManager.cs\SignInManager.cs" />
-        <Compile Include="automatic-ignore\SpaProxyMiddleware.cs\SpaProxyMiddleware.cs" />
-        <Compile Include="automatic-ignore\Startup.cs\Startup.cs" />
-        <Compile Include="automatic-ignore\Strings.Designer.cs\Strings.Designer.cs" />
-        <Compile Include="automatic-ignore\UnPlugVehicleViewModel.cs\UnPlugVehicleViewModel.cs" />
-        <Compile Include="automatic-ignore\UsePathBaseMiddleware.cs\UsePathBaseMiddleware.cs" />
         <None Update="automatic\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
@@ -65,24 +32,8 @@
         <None Update="automatic-ignore\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <Compile Remove="Test\**" />
-        <None Remove="Test\**" />
+        <None Update="automatic-ignore\MapMiddleware.cs\result">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
-    
-    <ItemGroup>
-      <EmbeddedResource Remove="Test\**" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <Content Include="automatic-ignore\BeMo.Hello.Journey.Services.csproj\BeMo.Hello.Journey.Services.csproj" />
-      <Content Include="automatic-ignore\BeMo.Hello.Journey.Services2.csproj\BeMo.Hello.Journey.Services.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Api.csproj\Neobd.Api.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Functions.csproj\Neobd.Functions.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Mobile.Android.csproj\BeMo.Hello.Mobile.Android.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Mobile.csproj\BeMo.Hello.Mobile.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Mobile.Droid.csproj\HomeCustomers.Mobile.Droid.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Mobile.iOS.csproj\BeMo.Hello.Mobile.iOS.csproj" />
-      <Content Include="automatic-ignore\Fabrikam.Mobile2.csproj\Neobd.Mobile.csproj" />
-    </ItemGroup>
-
 </Project>

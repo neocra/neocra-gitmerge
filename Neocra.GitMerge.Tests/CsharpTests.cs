@@ -242,6 +242,16 @@ namespace Neocra.GitMerge.Tests
         }
         
         [Fact]
+        public async Task Should_merge_When_statement_is_moved_and_add_between_statement()
+        {
+            await this.Merge(
+                "public class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n    var a = 2;\n    var i = 1;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var b = 3;\n    var a = 2;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n    var b = 3;\n    var a = 2;\n    var i = 1;\n    }\n}");
+        }
+        
+        [Fact]
         public async Task Should_merge_When_expression_change()
         {
             await this.Merge(
@@ -269,6 +279,17 @@ namespace Neocra.GitMerge.Tests
                 "public class Class1\n{\n    public void Method()\n    {\n    }\n}",
                 "public class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    var b = 3;\n    }\n}",
                 "public class Class1\n{\n    public void Method()\n    {\n    var b = 3;\n    }\n}");
+        }
+        
+               
+        [Fact]
+        public async Task Should_merge_When_field_setter_change()
+        {
+            await this.Merge(
+                "public class Class1{ private int _f;private int _g; public Class1() { _f = 12345679;_g = 12;}}",
+                "public class Class1{ private int _f;private int _g; public Class1() { _f = 12;_g = 134567;}}",
+                "public class Class1{ private int _f;private int _g; public Class1() { _f = 12345679;_g = 12;}}",
+                "public class Class1{ private int _f;private int _g; public Class1() { _f = 12;_g = 134567;}}");
         }
     }
 }

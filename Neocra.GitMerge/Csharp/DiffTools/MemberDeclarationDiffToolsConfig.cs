@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Neocra.GitMerge.Csharp.Diffs;
 using Neocra.GitMerge.Tools;
@@ -13,13 +12,17 @@ namespace Neocra.GitMerge.Csharp.DiffTools
     {
         private readonly Tools.DiffTools diffTools;
         private readonly ExpressionDiffToolsConfig expressionDiffToolsConfig;
+        private readonly BlockSyntaxDiffTools blockSyntaxDiffTools;
+        private readonly TriviaDiffTools triviaDiffTools;
 
         public MemberDeclarationDiffToolsConfig(Tools.DiffTools diffTools)
         {
             this.diffTools = diffTools;
+            this.blockSyntaxDiffTools = new BlockSyntaxDiffTools(diffTools);
             this.expressionDiffToolsConfig = new ExpressionDiffToolsConfig(diffTools);
+            this.triviaDiffTools = new TriviaDiffTools(diffTools);
         }
-        
+
         public override int Distance(MemberDeclarationDiff delete, MemberDeclarationDiff add)
         {
             return (delete.Value, add.Value) switch
@@ -28,7 +31,8 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 (NamespaceDeclarationSyntax delete1, NamespaceDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
                 (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
                 (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
-                var v => throw new NotImplementedException(v.ToString())
+                (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
+                var v => throw NotSupportedExceptions.Value(v)
             };
         }
 
@@ -36,10 +40,18 @@ namespace Neocra.GitMerge.Csharp.DiffTools
         {
             return (delete.Value, add.Value) switch
             {
-                (ClassDeclarationSyntax delete1, ClassDeclarationSyntax add1) => true,
-                (NamespaceDeclarationSyntax delete1, NamespaceDeclarationSyntax add1) => true,
-                (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => true,
-                (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => true,
+                (ClassDeclarationSyntax, ClassDeclarationSyntax) => true,
+                (NamespaceDeclarationSyntax, NamespaceDeclarationSyntax) => true,
+                (MethodDeclarationSyntax, MethodDeclarationSyntax) => true,
+                (MethodDeclarationSyntax, _) => false,
+                (_, MethodDeclarationSyntax) => false,
+                (PropertyDeclarationSyntax, PropertyDeclarationSyntax) => true,
+                (ConstructorDeclarationSyntax, ConstructorDeclarationSyntax) => true,
+                (ConstructorDeclarationSyntax, _) => false,
+                (_, ConstructorDeclarationSyntax) => false,
+                (FieldDeclarationSyntax, FieldDeclarationSyntax) => false,
+                (FieldDeclarationSyntax, _) => false,
+                (_, FieldDeclarationSyntax) => false,
                 var v => throw NotSupportedExceptions.Value(v)
             };
         }
@@ -49,7 +61,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             var children = (delete.Children ?? new List<Diff>())
                 .Union(add.Children ?? new List<Diff>())
                 .ToList();
-            
+
             return new MemberDeclarationDiff(DiffMode.Move, delete.IndexOfChild, add.IndexOfChild, delete.Value, children);
         }
 
@@ -57,7 +69,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
         {
             return a.ToString() == b.ToString();
         }
-        
+
         public override Diff? MakeARecursive(MemberDeclarationDiff delete, MemberDeclarationDiff add)
         {
             var children = ((delete.Value, add.Value) switch
@@ -66,6 +78,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 (NamespaceDeclarationSyntax delete1, NamespaceDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
                 (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
                 (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
+                (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
                 var v => throw NotSupportedExceptions.Value(v)
             }).ToList();
 
@@ -77,21 +90,75 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             return null;
         }
 
+        private IEnumerable<Diff> MakeARecursive(int index, ConstructorDeclarationSyntax delete, ConstructorDeclarationSyntax add)
+        {
+            var children = this.triviaDiffTools.GetTriviaChildren(delete, add);
+
+            if (delete.Identifier.ToString() != add.Identifier.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.Body?.ToString() != add.Body?.ToString())
+            {
+                children.AddRange(this.blockSyntaxDiffTools.MakeARecursive(index, delete.Body, add.Body));
+            }
+
+            if (delete.Initializer?.ToString() != add.Initializer?.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.Modifiers.ToString() != add.Modifiers.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.AttributeLists.ToString() != add.AttributeLists.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.ExpressionBody?.ToString() != add.ExpressionBody?.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.ParameterList.ToString() != add.ParameterList.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.SemicolonToken.ToString() != add.SemicolonToken.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            if (delete.SemicolonToken.ToString() != add.SemicolonToken.ToString())
+            {
+                throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
+            }
+
+            return children;
+        }
+
         private IEnumerable<Diff> MakeARecursive(int index, PropertyDeclarationSyntax delete, PropertyDeclarationSyntax add)
         {
             if (delete.Identifier.ToString() != add.Identifier.ToString())
             {
                 throw NotSupportedExceptions.Value((delete.Identifier, add.Identifier));
             }
+
             if (delete.Modifiers.ToString() != add.Modifiers.ToString())
             {
                 throw NotSupportedExceptions.Value((delete.Modifiers, add.Modifiers));
             }
+
             if (delete.Type.ToString() != add.Type.ToString())
             {
                 throw NotSupportedExceptions.Value((delete.Type, add.Type));
             }
-            
+
             if (delete.AccessorList != null && add.AccessorList != null)
             {
                 if (delete.AccessorList.ToFullString() != add.AccessorList.ToFullString())
@@ -99,12 +166,13 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                     yield return this.MakeARecursive(delete.AccessorList, add.AccessorList, index);
                 }
             }
-            
+
             if (delete.ExpressionBody?.ToString() != add.ExpressionBody?.ToString())
             {
                 if (delete.ExpressionBody != null && add.ExpressionBody != null)
                 {
-                    foreach (var d in expressionDiffToolsConfig.MakeARecursive(index, delete.ExpressionBody.Expression,
+                    foreach (var d in expressionDiffToolsConfig.MakeARecursive(index,
+                                 delete.ExpressionBody.Expression,
                                  add.ExpressionBody.Expression,
                                  SyntaxTriviaList.Empty)) yield return d;
                 }
@@ -112,39 +180,41 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
             if (delete.Initializer?.ToString() != add.Initializer?.ToString())
             {
-                foreach (var d in this.MakeARecursive(index, delete.Initializer,
+                foreach (var d in this.MakeARecursive(index,
+                             delete.Initializer,
                              add.Initializer)) yield return d;
             }
 
             if (delete.SemicolonToken.ToString() != add.SemicolonToken.ToString())
             {
-                foreach (var d in MakeARecursive(index, delete.SemicolonToken,
+                foreach (var d in MakeARecursive(index,
+                             delete.SemicolonToken,
                              add.SemicolonToken,
                              SyntaxTriviaList.Empty)) yield return d;
             }
-            
+
             if (delete.AttributeLists.ToString() != add.AttributeLists.ToString())
             {
                 throw NotSupportedExceptions.Value((delete.AttributeLists, add.AttributeLists));
             }
-            
+
             if (delete.ExplicitInterfaceSpecifier?.ToString() != add.ExplicitInterfaceSpecifier?.ToString())
             {
                 throw NotSupportedExceptions.Value((delete.ExplicitInterfaceSpecifier, add.ExplicitInterfaceSpecifier));
             }
-            
+
             yield break;
         }
 
         private Diff MakeARecursive(AccessorListSyntax deleteAccessorList, AccessorListSyntax addAccessorList, int indexOfChild)
         {
-            var children = this.GetTriviaChildren(deleteAccessorList, addAccessorList);
+            var children = this.triviaDiffTools.GetTriviaChildren(deleteAccessorList, addAccessorList);
 
             if (deleteAccessorList.Accessors.ToFullString() != addAccessorList.Accessors.ToFullString())
             {
                 throw NotSupportedExceptions.Value((deleteAccessorList.Accessors, addAccessorList.Accessors));
             }
-            
+
             return new AccessorListDiff(DiffMode.Update, indexOfChild, 0, deleteAccessorList, children);
         }
 
@@ -158,10 +228,10 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             if (deleteInitializer == null && addInitializer != null)
             {
                 yield return new EqualsValueClauseDiff(DiffMode.Add, delete, 0, addInitializer);
-                
+
                 yield break;
             }
-            
+
             throw new NotImplementedException();
         }
 
@@ -183,10 +253,10 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 }
             }
         }
-        
+
         private List<Diff> MakeARecursive(int index, NamespaceDeclarationSyntax delete, NamespaceDeclarationSyntax add)
         {
-            var children = GetTriviaChildren(delete, add);
+            var children = this.triviaDiffTools.GetTriviaChildren(delete, add);
 
             children.AddRange(this.GetTokenDiff(TokenDiffEnum.CloseBrace, delete.CloseBraceToken, add.CloseBraceToken));
             children.AddRange(this.GetTokenDiff(TokenDiffEnum.OpenBrace, delete.OpenBraceToken, add.OpenBraceToken));
@@ -216,7 +286,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         private IEnumerable<Diff> MakeARecursive(int index, ClassDeclarationSyntax delete, ClassDeclarationSyntax add)
         {
-            var children = GetTriviaChildren(delete, add);
+            var children = this.triviaDiffTools.GetTriviaChildren(delete, add);
 
             children.AddRange(this.GetTokenDiff(TokenDiffEnum.CloseBrace, delete.CloseBraceToken, add.CloseBraceToken));
             children.AddRange(this.GetTokenDiff(TokenDiffEnum.OpenBrace, delete.OpenBraceToken, add.OpenBraceToken));
@@ -228,12 +298,12 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
             return children;
         }
-        
+
         public override MemberDeclarationDiff CreateDiff(DiffMode mode, List<MemberDeclarationSyntax> elements, int index)
         {
             return new MemberDeclarationDiff(mode, index, 0, elements[index]);
         }
-        
+
         private List<Diff> GetTriviaChildren(SyntaxToken delete, SyntaxToken add)
         {
             var children = new List<Diff>();
@@ -252,29 +322,6 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                     new SyntaxTriviaListDiffToolsConfig(TriviaType.Trailing),
                     delete.TrailingTrivia.ToList(),
                     add.TrailingTrivia.ToList()));
-            }
-
-            return children;
-        }
-        
-        private List<Diff> GetTriviaChildren(CSharpSyntaxNode deleteAccessorList, CSharpSyntaxNode addAccessorList)
-        {
-            var children = new List<Diff>();
-
-            if (deleteAccessorList.GetLeadingTrivia() != addAccessorList.GetLeadingTrivia())
-            {
-                children.AddRange(this.diffTools.GetDiffOfChildrenFusion(
-                    new SyntaxTriviaListDiffToolsConfig(TriviaType.Leading),
-                    deleteAccessorList.GetLeadingTrivia().ToList(),
-                    addAccessorList.GetLeadingTrivia().ToList()));
-            }
-
-            if (deleteAccessorList.GetTrailingTrivia() != addAccessorList.GetTrailingTrivia())
-            {
-                children.AddRange(this.diffTools.GetDiffOfChildrenFusion(
-                    new SyntaxTriviaListDiffToolsConfig(TriviaType.Trailing),
-                    deleteAccessorList.GetTrailingTrivia().ToList(),
-                    addAccessorList.GetTrailingTrivia().ToList()));
             }
 
             return children;

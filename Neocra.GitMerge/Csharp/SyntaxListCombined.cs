@@ -21,6 +21,24 @@ namespace Neocra.GitMerge.Csharp
         {
             return this.syntaxTriviaList.RemoveAt(index);
         }
+        
+        public SyntaxTriviaList Move(int index, int movedIndex)
+        {
+            var val = this.syntaxTriviaList[index];
+
+            var list =  this.syntaxTriviaList.RemoveAt(index);
+
+            if (index < movedIndex)
+            {
+                list = list.Insert(movedIndex - 1, val);
+            }
+            else
+            {
+                list = list.Insert(movedIndex, val);
+            }
+
+            return list;
+        }
     }
     
     public class SyntaxListCombined<T> : ISyntaxList<T, SyntaxList<T>> 
@@ -43,6 +61,24 @@ namespace Neocra.GitMerge.Csharp
         public SyntaxList<T> RemoveAt(int index)
         {
             return this.syntaxList.RemoveAt(index);
+        }
+        
+        public SyntaxList<T> Move(int index, int movedIndex)
+        {
+            var val = this.syntaxList[index];
+
+            var list =  this.syntaxList.RemoveAt(index);
+
+            if (index < movedIndex)
+            {
+                list = list.Insert(movedIndex - 1, val);
+            }
+            else
+            {
+                list = list.Insert(movedIndex, val);
+            }
+
+            return list;
         }
     }
 }

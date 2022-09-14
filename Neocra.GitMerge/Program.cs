@@ -42,6 +42,7 @@ namespace Neocra.GitMerge
 
             services.AddSingleton<IMerger, XmlMerger>();
             services.AddSingleton<IMerger, CsharpMerger>();
+            services.AddSingleton<CsharpApply>();
             services.AddSingleton<IMerger, CsprojMerger>();
             services.AddSingleton<MergerSelecter>();
             services.AddSingleton<XmlDataAccess>();

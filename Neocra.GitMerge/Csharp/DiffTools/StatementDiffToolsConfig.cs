@@ -11,17 +11,37 @@ namespace Neocra.GitMerge.Csharp.DiffTools
     public class StatementDiffToolsConfig : DiffToolsConfig<StatementSyntax,StatementDiff>
     {
         private readonly Tools.DiffTools diffTools;
+        private readonly BlockSyntaxDiffTools blockSyntaxDiffTools;
         private readonly ExpressionDiffToolsConfig expressionDiffToolsConfig;
 
         public StatementDiffToolsConfig(Tools.DiffTools diffTools)
         {
             this.diffTools = diffTools;
+            this.blockSyntaxDiffTools = new BlockSyntaxDiffTools(diffTools);
             this.expressionDiffToolsConfig = new ExpressionDiffToolsConfig(diffTools);
         }
 
         public override int Distance(StatementDiff delete, StatementDiff add)
         {
-            return StringTools.Compute(delete.ToString(), add.ToString());
+            return (delete.Value, add.Value) switch
+            {
+                (LocalDeclarationStatementSyntax d, LocalDeclarationStatementSyntax a) => StringTools.Compute(d.ToString(), a.ToString()),
+                (IfStatementSyntax d, IfStatementSyntax a) => StringTools.Compute(d.ToString(), a.ToString()),
+                (ExpressionStatementSyntax d, ExpressionStatementSyntax a) => Distance(d, a),
+                (ReturnStatementSyntax d, ReturnStatementSyntax a) => StringTools.Compute(d.ToString(), a.ToString()),
+                (BlockSyntax d, BlockSyntax a) => StringTools.Compute(d.ToString(), a.ToString()),
+                var v => throw NotSupportedExceptions.Value(v)
+            };
+        }
+
+        private static int Distance(ExpressionStatementSyntax delete, ExpressionStatementSyntax add)
+        {
+            return (delete.Expression, add.Expression) switch
+            {
+                (AssignmentExpressionSyntax d, AssignmentExpressionSyntax a) => d.Left.ToString() == a.Left.ToString() ? 0 : StringTools.Compute(d.ToString(), a.ToString()),
+                (InvocationExpressionSyntax d, InvocationExpressionSyntax a) => StringTools.Compute(d.ToString(), a.ToString()),
+                var v => throw NotSupportedExceptions.Value(v)
+            };
         }
 
         public override bool CanFusion(StatementDiff delete, StatementDiff add)
@@ -41,7 +61,8 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 (LocalDeclarationStatementSyntax delete1, LocalDeclarationStatementSyntax add1) => this.MakeARecursiveOnLocalDeclaration(index, delete1, add1),
                 (IfStatementSyntax delete1, IfStatementSyntax add1) => this.MakeARecursive(index, delete1, add1),
                 (ReturnStatementSyntax delete1, ReturnStatementSyntax add1) => this.MakeARecursive(index, delete1, add1),
-                (BlockSyntax delete1, BlockSyntax add1) => this.MakeARecursive(index, delete1, add1),
+                (BlockSyntax delete1, BlockSyntax add1) => this.blockSyntaxDiffTools.MakeARecursive(index, delete1, add1),
+                (ExpressionStatementSyntax delete1, ExpressionStatementSyntax add1) => this.MakeARecursive(index, delete1, add1),
                 var v => throw NotSupportedExceptions.Value(v)
             }).ToList();
 
@@ -51,6 +72,11 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             }
 
             return null;
+        }
+
+        private IEnumerable<Diff> MakeARecursive(int index, ExpressionStatementSyntax delete1, ExpressionStatementSyntax add1)
+        {
+            foreach (var d in expressionDiffToolsConfig.MakeARecursive(index, delete1.Expression, add1.Expression, SyntaxTriviaList.Empty)) yield return d;
         }
 
         private IEnumerable<Diff> MakeARecursive(int index, ReturnStatementSyntax delete1, ReturnStatementSyntax add1)
@@ -65,9 +91,12 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         private IEnumerable<Diff> MakeARecursive(int index, IfStatementSyntax delete1, IfStatementSyntax add1)
         {
-            foreach (var d in expressionDiffToolsConfig.MakeARecursive(index, delete1.Condition,
-                add1.Condition,
-                SyntaxTriviaList.Empty)) yield return d;
+            if (delete1.Condition.ToFullString() != add1.Condition.ToFullString())
+            {
+                foreach (var d in expressionDiffToolsConfig.MakeARecursive(index, delete1.Condition,
+                             add1.Condition,
+                             SyntaxTriviaList.Empty)) yield return d;
+            }
 
             foreach (var d in this.diffTools.GetDiffOfChildrenFusion(
                 new AttributeListSyntaxDiffToolsConfig(),
@@ -78,19 +107,6 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             if (makeARecursive != null)
             {
                 yield return makeARecursive;
-            }
-        }
-
-        private IEnumerable<Diff> MakeARecursive(int index, BlockSyntax delete1, BlockSyntax add1)
-        {
-            var children = this.diffTools.GetDiffOfChildrenFusion(
-                new StatementDiffToolsConfig(this.diffTools),
-                delete1.Statements.ToList(),
-                add1.Statements.ToList()).ToList();
-
-            foreach (var child in children)
-            {
-                yield return child;
             }
         }
 

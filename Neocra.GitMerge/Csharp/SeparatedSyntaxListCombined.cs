@@ -23,5 +23,23 @@ namespace Neocra.GitMerge.Csharp
         {
             return this.separatedSyntaxList.RemoveAt(index);
         }
+
+        public SeparatedSyntaxList<T> Move(int index, int movedIndex)
+        {
+            var val = this.separatedSyntaxList[index];
+
+           var list =  this.separatedSyntaxList.RemoveAt(index);
+
+           if (index < movedIndex)
+           {
+               list = list.Insert(movedIndex - 1, val);
+           }
+           else
+           {
+               list = list.Insert(movedIndex, val);
+           }
+
+           return list;
+        }
     }
 }
