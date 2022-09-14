@@ -122,6 +122,16 @@ namespace Neocra.GitMerge.Tests
         }
         
         [Fact]
+        public async Task Should_merge_methods_When_declarator_is_moved()
+        {
+            await this.Merge(
+                "public class Class1\n{\n    public void Method()\n    {\n        int a = 0,i = 0;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n        int i = 0,a = 0;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n        int a = 0,i = 0;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n        int i = 0,a = 0;\n    }\n}");
+        }
+        
+        [Fact]
         public async Task Should_change_type_of_variable_When_merge_statement()
         {
             await this.Merge(
