@@ -182,6 +182,16 @@ namespace Neocra.GitMerge.Tests
         }
         
         [Fact]
+        public async Task Should_merge_methods_When_have_lambda_Parenthesized_Expression()
+        {
+            await this.Merge(
+                "public class Class1\n{\n    public void Method()\n    {\n         Func<int> i = () => 1;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n         Func<int> i = () => 2;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n         Func<int> i = () => 1;\n    }\n}",
+                "public class Class1\n{\n    public void Method()\n    {\n         Func<int> i = () => 2;\n    }\n}");
+        }
+        
+        [Fact]
         public async Task Should_merge_methods_When_have_Unary_Expression()
         {
             await this.Merge(

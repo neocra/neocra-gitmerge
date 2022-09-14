@@ -415,6 +415,62 @@ public class CsharpApply
             (AssignmentExpressionDiff d, InvocationExpressionSyntax m) => this.ApplyAssignmentExpressionDiffOnInvocationExpressionSyntax(d, m, index),
             (ArgumentDiff d, InvocationExpressionSyntax m) => this.ApplyArgumentDiffOnInvocationExpressionSyntax(d, m, index),
             (NameMemberAccessExpressionDiff d, MemberAccessExpressionSyntax m) => m.WithName(d.Value),
+            (ExpressionBodyDiff d, ParenthesizedLambdaExpressionSyntax m) => this.ApplyExpressionBodyDiffOnParenthesizedLambdaExpressionSyntax(d, m),
+            var value => throw NotSupportedExceptions.Value(value)
+        };
+    }
+
+    private ExpressionSyntax ApplyExpressionBodyDiffOnParenthesizedLambdaExpressionSyntax(ExpressionBodyDiff diff, ParenthesizedLambdaExpressionSyntax current)
+    {
+        if (diff.Mode == DiffMode.Add)
+        {
+            return diff.Value;
+        }
+            
+        if (diff.Mode == DiffMode.Update)
+        {
+            if (diff.Children == null)
+            {
+                throw NotSupportedExceptions.Value(current);
+            }
+
+            return ApplyOnChildren(current, diff.Children, ApplyOnExpressionSyntax);
+        }
+
+        return current switch
+        {
+            var value => throw NotSupportedExceptions.Value(value)
+        };
+    }
+
+    private ParenthesizedLambdaExpressionSyntax ApplyOnExpressionSyntax(Diff child, ParenthesizedLambdaExpressionSyntax current, int index)
+    {
+        return (child, current) switch
+        {
+            (ExpressionDiff d, ParenthesizedLambdaExpressionSyntax m) => this.ApplyExpressionDiffOnParenthesizedLambdaExpressionSyntax(d, m),
+            var value => throw NotSupportedExceptions.Value(value)
+        };
+    }
+
+    private ParenthesizedLambdaExpressionSyntax ApplyExpressionDiffOnParenthesizedLambdaExpressionSyntax(ExpressionDiff diff, ParenthesizedLambdaExpressionSyntax current)
+    {
+        if (diff.Mode == DiffMode.Add)
+        {
+            return current.WithBody(diff.Value);
+        }
+            
+        if (diff.Mode == DiffMode.Update)
+        {
+            if (diff.Children == null)
+            {
+                return current.WithBody(diff.Value);
+            }
+
+            return ApplyOnChildren(current, diff.Children, ApplyOnExpressionSyntax);
+        }
+
+        return current switch
+        {
             var value => throw NotSupportedExceptions.Value(value)
         };
     }
