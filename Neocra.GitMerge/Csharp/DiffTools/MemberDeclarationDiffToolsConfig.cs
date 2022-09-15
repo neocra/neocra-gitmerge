@@ -67,7 +67,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         public override bool IsElementEquals(MemberDeclarationSyntax a, MemberDeclarationSyntax b)
         {
-            return a.ToString() == b.ToString();
+            return a.ToFullString() == b.ToFullString();
         }
 
         public override Diff? MakeARecursive(MemberDeclarationDiff delete, MemberDeclarationDiff add)

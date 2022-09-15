@@ -62,6 +62,16 @@ namespace Neocra.GitMerge.Tests
         }
         
         [Fact]
+        public async Task Should_merge_class_When_have_move_trivia()
+        {
+            await this.Merge(
+                "public class Class1\n{\nprivate string field;\n }",
+                "public class Class1\n{\nprivate string field; \n}",
+                "public class Class1\n{\nprivate string field;\n }",
+                "public class Class1\n{\nprivate string field; \n}");
+        }
+        
+        [Fact]
         public async Task Should_merge_class_When_have_insert_field_from_current_and_other()
         {
             await this.Merge(
