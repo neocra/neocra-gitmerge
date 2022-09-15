@@ -30,38 +30,38 @@ public class CsharpApply
     {
         var currentBody = current.Body;
 
-        if (diff is { Mode: DiffMode.Move })
+        if (currentBody == null)
         {
-            if (current.Body == null)
-            {
-                return current;
-            }
-                
-            var m = current.Body.Statements[diff.IndexOfChild];
-
-            var statements = current.Body.Statements.RemoveAt(diff.IndexOfChild + index);
-
-            statements = statements.Insert(diff.MoveIndexOfChild + index, m);
-                
-            return current.WithBody(current.Body.WithStatements(statements));
+            return current;
         }
+        
+        return current.WithBody(this.ApplyStatementDiffOnBlockSyntax(diff, currentBody, index));
+    }
+
+    private MemberDeclarationSyntax ApplyStatementDiffOnMethodDeclaration(StatementDiff diff, MethodDeclarationSyntax current, int index)
+    {
+        var currentBody = current.Body;
 
         if (currentBody == null)
         {
             return current;
         }
-            
+        
+        return current.WithBody(this.ApplyStatementDiffOnBlockSyntax(diff, currentBody, index));
+    }
+
+    private BlockSyntax ApplyStatementDiffOnBlockSyntax(StatementDiff diff, BlockSyntax currentBody, int index)
+    {
         if (diff is not { Mode: DiffMode.Update })
         {
-            return current.WithBody(currentBody.WithStatements(this.ApplyInsertOrDeleteDiff(currentBody.Statements.To(), diff, index)));
+            return currentBody.WithStatements(this.ApplyInsertOrDeleteDiff(currentBody.Statements.To(), diff, index));
         }
 
         var baseMember = currentBody.Statements[diff.IndexOfChild];
 
         var newMember = this.ApplyStatementDiffOnStatementSyntax(diff, baseMember);
 
-        return current.WithBody(currentBody.WithStatements(currentBody.Statements.Replace(baseMember, newMember)));
-
+        return currentBody.WithStatements(currentBody.Statements.Replace(baseMember, newMember));
     }
 
     private MemberDeclarationSyntax ApplyTokenDiffOnTypeDeclarationSyntax(TokenDiff diff, TypeDeclarationSyntax classDeclarationSyntax)
@@ -303,43 +303,7 @@ public class CsharpApply
 
         return current.WithMembers(current.Members.Replace(baseMember, newMember));
     }
-           
-    private MemberDeclarationSyntax ApplyStatementDiffOnMethodDeclaration(StatementDiff diff, MethodDeclarationSyntax current, int index)
-    {
-        var currentBody = current.Body;
-
-        if (diff is { Mode: DiffMode.Move })
-        {
-            if (current.Body == null)
-            {
-                return current;
-            }
-                
-            var m = current.Body.Statements[diff.IndexOfChild];
-
-            var statements = current.Body.Statements.RemoveAt(diff.IndexOfChild);
-
-            statements = statements.Insert(diff.MoveIndexOfChild, m);
-                
-            return current.WithBody(current.Body.WithStatements(statements));
-        }
-
-        if (currentBody == null)
-        {
-            return current;
-        }
-            
-        if (diff is not { Mode: DiffMode.Update })
-        {
-            return current.WithBody(currentBody.WithStatements(this.ApplyInsertOrDeleteDiff(currentBody.Statements.To(), diff, index)));
-        }
-
-        var baseMember = currentBody.Statements[diff.IndexOfChild];
-
-        var newMember = this.ApplyStatementDiffOnStatementSyntax(diff, baseMember);
-
-        return current.WithBody(currentBody.WithStatements(currentBody.Statements.Replace(baseMember, newMember)));
-    }
+    
 
     private StatementSyntax ApplyStatementDiffOnStatementSyntax(StatementDiff diff, StatementSyntax baseMember) 
     {
