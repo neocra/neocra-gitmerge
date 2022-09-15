@@ -11,9 +11,7 @@ namespace Neocra.GitMerge.Csharp
         {
             this.syntaxList = syntaxList;
         }
-            
-        public int Count => this.syntaxList.Count;
-
+        
         public SyntaxList<T> Insert(int index, T value)
         {
             return this.syntaxList.Insert(index, value);

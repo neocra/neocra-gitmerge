@@ -11,7 +11,6 @@ public class SyntaxTriviaListCombined : ISyntaxList<SyntaxTrivia, SyntaxTriviaLi
         this.syntaxTriviaList = syntaxTriviaList;
     }
             
-    public int Count => this.syntaxTriviaList.Count;
     public SyntaxTriviaList Insert(int index, SyntaxTrivia value)
     {
         return this.syntaxTriviaList.Insert(index, value);

@@ -12,8 +12,6 @@ namespace Neocra.GitMerge.Csharp
             this.separatedSyntaxList = separatedSyntaxList;
         }
 
-        public int Count => this.separatedSyntaxList.Count;
-
         public SeparatedSyntaxList<T> Insert(int index, T value)
         {
             return this.separatedSyntaxList.Insert(index, value);
