@@ -358,6 +358,11 @@ namespace Neocra.GitMerge.Csharp.DiffTools
         {
             this.Type = type;
         }
+
+        protected override string GetName()
+        {
+            return Value.ToFullString();
+        }
     }
 
     internal class AccessorListDiff : Diff<AccessorListSyntax>, IDiffChildren

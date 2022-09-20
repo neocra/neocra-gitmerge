@@ -64,53 +64,37 @@ public class CsharpApply
         return currentBody.WithStatements(currentBody.Statements.Replace(baseMember, newMember));
     }
 
-    private MemberDeclarationSyntax ApplyTokenDiffOnTypeDeclarationSyntax(TokenDiff diff, TypeDeclarationSyntax classDeclarationSyntax)
+    private MemberDeclarationSyntax ApplyTokenDiffOnTypeDeclarationSyntax(TokenDiff diff, TypeDeclarationSyntax current)
     {
         if (diff.Mode == DiffMode.Update)
         {
-            if (diff.Children != null)
+            return (current, diff) switch
             {
-                foreach (var child in diff.Children)
-                {
-                    classDeclarationSyntax = (classDeclarationSyntax, diff.TokenDiffEnum) switch
-                    {
-                        (var n, TokenDiffEnum.CloseBrace) => n.WithCloseBraceToken(this.Apply(child, n.CloseBraceToken)),
-                        (var n, TokenDiffEnum.OpenBrace) => n.WithOpenBraceToken(this.Apply(child, n.OpenBraceToken)),
-                        var d => throw NotSupportedExceptions.Value(d)
-                    };
-                }
-            }
-
-            return classDeclarationSyntax;
+                (var n, { TokenDiffEnum: TokenDiffEnum.CloseBrace}) => n.WithCloseBraceToken(ApplyOnChildren(n.CloseBraceToken, diff.Children, this.Apply)),
+                (var n, { TokenDiffEnum: TokenDiffEnum.OpenBrace}) => n.WithOpenBraceToken(ApplyOnChildren(n.OpenBraceToken, diff.Children, this.Apply)),
+                var d => throw NotSupportedExceptions.Value(d)
+            };
         }
             
-        throw NotSupportedExceptions.Value(classDeclarationSyntax);
+        throw NotSupportedExceptions.Value(current);
     }
 
-    private MemberDeclarationSyntax ApplyTokenDiffOnNamespaceDeclarationSyntax(TokenDiff diff, NamespaceDeclarationSyntax namespaceDeclarationSyntax)
+    private MemberDeclarationSyntax ApplyTokenDiffOnNamespaceDeclarationSyntax(TokenDiff diff, NamespaceDeclarationSyntax current)
     {
         if (diff.Mode == DiffMode.Update)
         {
-            if (diff.Children != null)
+            return (current, diff) switch
             {
-                foreach (var child in diff.Children)
-                {
-                    namespaceDeclarationSyntax = (namespaceDeclarationSyntax, diff.TokenDiffEnum) switch
-                    {
-                        (var n, TokenDiffEnum.CloseBrace) => n.WithCloseBraceToken(this.Apply(child, n.CloseBraceToken)),
-                        (var n, TokenDiffEnum.OpenBrace) => n.WithOpenBraceToken(this.Apply(child, n.OpenBraceToken)),
-                        var d => throw NotSupportedExceptions.Value(d)
-                    };
-                }
-            }
-
-            return namespaceDeclarationSyntax;
+                (var n, { TokenDiffEnum: TokenDiffEnum.CloseBrace}) => n.WithCloseBraceToken(ApplyOnChildren(n.CloseBraceToken, diff.Children, this.Apply)),
+                (var n, { TokenDiffEnum: TokenDiffEnum.OpenBrace}) => n.WithOpenBraceToken(ApplyOnChildren(n.OpenBraceToken, diff.Children, this.Apply)),
+                var d => throw NotSupportedExceptions.Value(d)
+            };
         }
 
-        throw NotSupportedExceptions.Value(namespaceDeclarationSyntax);
+        throw NotSupportedExceptions.Value(current);
     }
 
-    private SyntaxToken Apply(Diff variableDeclaratorDiff, SyntaxToken nCloseBraceToken)
+    private SyntaxToken Apply(Diff variableDeclaratorDiff, SyntaxToken nCloseBraceToken, int index)
     {
         switch (variableDeclaratorDiff)
         {
@@ -118,9 +102,9 @@ public class CsharpApply
                 switch (t.Type)
                 {
                     case TriviaType.Trailing:
-                        return nCloseBraceToken.WithTrailingTrivia(this.ApplyInsertOrDeleteDiff(new SyntaxTriviaListCombined(nCloseBraceToken.TrailingTrivia), t, 0));
+                        return nCloseBraceToken.WithTrailingTrivia(this.ApplyInsertOrDeleteDiff(new SyntaxTriviaListCombined(nCloseBraceToken.TrailingTrivia), t, index));
                     case TriviaType.Leading:
-                        return nCloseBraceToken.WithLeadingTrivia(this.ApplyInsertOrDeleteDiff(new SyntaxTriviaListCombined(nCloseBraceToken.LeadingTrivia), t, 0));
+                        return nCloseBraceToken.WithLeadingTrivia(this.ApplyInsertOrDeleteDiff(new SyntaxTriviaListCombined(nCloseBraceToken.LeadingTrivia), t, index));
                     case var x : 
                         throw NotSupportedExceptions.Value(t);
                 }
