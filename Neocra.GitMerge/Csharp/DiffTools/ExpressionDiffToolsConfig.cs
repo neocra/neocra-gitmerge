@@ -11,26 +11,116 @@ namespace Neocra.GitMerge.Csharp.DiffTools
     public class ExpressionDiffToolsConfig
     {
         private readonly Tools.DiffTools diffTools;
+        private readonly TriviaDiffTools triviaDiffTools;
 
         public ExpressionDiffToolsConfig(Tools.DiffTools diffTools)
         {
             this.diffTools = diffTools;
+            this.triviaDiffTools = new TriviaDiffTools(diffTools);
         }
 
         public IEnumerable<Diff> MakeARecursive(int index, ExpressionSyntax? delete1, ExpressionSyntax? add1, SyntaxTriviaList syntaxTriviaList)
         {
             return (delete1, add1) switch
             {
-                (BinaryExpressionSyntax delete, BinaryExpressionSyntax add) => this.MakeARecursive(index, delete, add),
+                (BinaryExpressionSyntax delete, BinaryExpressionSyntax add) => C(MakeARecursive, index, delete, add),
                 (LiteralExpressionSyntax delete, LiteralExpressionSyntax add) => MakeARecursive(delete, add),
                 (PrefixUnaryExpressionSyntax delete, PrefixUnaryExpressionSyntax add) => MakeARecursive(delete, add),
-                (ParenthesizedExpressionSyntax delete, ParenthesizedExpressionSyntax add) => this.MakeARecursive(index, delete, add),
-                (InvocationExpressionSyntax delete, InvocationExpressionSyntax add) => MakeARecursive(index, delete, add),
-                (MemberAccessExpressionSyntax delete, MemberAccessExpressionSyntax add) => MakeARecursive(index, delete, add),
+                (ParenthesizedExpressionSyntax delete, ParenthesizedExpressionSyntax add) => C(MakeARecursive, index, delete, add),
+                (ParenthesizedLambdaExpressionSyntax delete, ParenthesizedLambdaExpressionSyntax add) => C(MakeARecursive, index, delete, add),
+                (InvocationExpressionSyntax delete, InvocationExpressionSyntax add) => C(MakeARecursive, index, delete, add),
+                (MemberAccessExpressionSyntax delete, MemberAccessExpressionSyntax add) => C(MakeARecursive, index, delete, add),
+                (AssignmentExpressionSyntax delete, AssignmentExpressionSyntax add) => C(MakeARecursive, index, delete, add),
+                (IdentifierNameSyntax delete, IdentifierNameSyntax add) => MakeARecursive(index, delete, add),
+                (ObjectCreationExpressionSyntax delete, ObjectCreationExpressionSyntax add) => C(MakeARecursive, index, delete, add),
                 (null, ExpressionSyntax d) => AddExpression(index, d, syntaxTriviaList),
-                (ExpressionSyntax delete,ExpressionSyntax add) => UpdateExpression(index, delete, add, syntaxTriviaList),
+                (ExpressionSyntax delete, ExpressionSyntax add) => UpdateExpression(index, delete, add, syntaxTriviaList),
                 _ => throw new ArgumentOutOfRangeException()
             };
+        }
+
+        private IEnumerable<Diff> MakeARecursive(int index, ParenthesizedLambdaExpressionSyntax delete, ParenthesizedLambdaExpressionSyntax add)
+        {
+            if (delete.Block?.ToFullString() != add.Block?.ToFullString())
+            {
+                throw NotSupportedExceptions.Value((delete, add));
+            }
+            
+            if (delete.Modifiers.ToFullString() != add.Modifiers.ToFullString())
+            {
+                throw NotSupportedExceptions.Value((delete, add));
+            }
+            
+            if (delete.ParameterList.ToFullString() != add.ParameterList.ToFullString())
+            {
+                throw NotSupportedExceptions.Value((delete, add));
+            }
+
+            if (delete.ExpressionBody?.ToFullString() != add.ExpressionBody?.ToFullString())
+            {
+                if (delete.ExpressionBody == null || add.ExpressionBody == null)
+                {
+                    throw NotSupportedExceptions.Value((delete.ExpressionBody, add.ExpressionBody));
+                }
+                
+                yield return new ExpressionBodyDiff(DiffMode.Update, index, 0, delete.ExpressionBody, 
+                    MakeARecursive(index, delete.ExpressionBody, add.ExpressionBody, SyntaxTriviaList.Empty).ToList());
+            }
+        }
+
+        private IEnumerable<Diff> MakeARecursive(int index, ObjectCreationExpressionSyntax delete1, ObjectCreationExpressionSyntax add1)
+        {
+            if (delete1.ArgumentList?.ToString() != add1.ArgumentList?.ToString())
+            {
+                if (delete1.ArgumentList == null || add1.ArgumentList == null)
+                {
+                    throw NotSupportedExceptions.Value((delete1, add1));
+                }
+                
+                foreach (var diff in this.diffTools.GetDiffOfChildrenFusion(new ArgumentDiffToolsConfig(),
+                             delete1.ArgumentList.Arguments.ToList(),
+                             add1.ArgumentList.Arguments.ToList()))
+                    yield return diff;
+            }
+        }
+
+        private IEnumerable<Diff> MakeARecursive(int index, IdentifierNameSyntax delete1, IdentifierNameSyntax add1)
+        {
+            throw NotSupportedExceptions.Value((delete1, add1));
+        }
+
+        private IEnumerable<Diff> C<T>(Func<int, T, T, IEnumerable<Diff>> makeARecursive, int index, T delete, T add)
+            where T : ExpressionSyntax
+        {
+            var children = new List<Diff>();
+            
+            children.AddRange(makeARecursive(index, delete, add));
+            
+            if (children.Any())
+            {
+                yield return new ExpressionDiff(DiffMode.Update, index, 0, add, children);
+                yield break;
+            }
+
+            throw NotSupportedExceptions.Value((delete, add));
+        }
+
+        private IEnumerable<Diff> MakeARecursive(int index, AssignmentExpressionSyntax delete1, AssignmentExpressionSyntax add1)
+        {
+            if (delete1.Left.ToString() != add1.Left.ToString())
+            {
+               yield return new AssignmentExpressionDiff(DiffMode.Update, AssignmentExpressionDiffMode.Left, index, 0, delete1, MakeARecursive(index, delete1.Left, add1.Left, SyntaxTriviaList.Empty).ToList());
+            }
+
+            if (delete1.Right.ToString() != add1.Right.ToString())
+            {
+                yield return new AssignmentExpressionDiff(DiffMode.Update,
+                    AssignmentExpressionDiffMode.Right,
+                    index,
+                    0,
+                    delete1,
+                    MakeARecursive(index, delete1.Right, add1.Right, SyntaxTriviaList.Empty).ToList());
+            }
         }
 
         private IEnumerable<Diff> UpdateExpression(int index, ExpressionSyntax delete, ExpressionSyntax add, SyntaxTriviaList syntaxTriviaList)
@@ -40,13 +130,12 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 yield return new ExpressionDiff(DiffMode.Update, index, 0, add);
                 yield break;
             }
-
+            
             throw NotSupportedExceptions.Value((delete, add));
         }
 
         private IEnumerable<Diff> MakeARecursive(int index, MemberAccessExpressionSyntax delete1, MemberAccessExpressionSyntax add1)
         {
-            var children = new List<Diff>();
             if (delete1.Expression.ToString() != add1.Expression.ToString())
             {
                 throw new NotImplementedException();
@@ -54,18 +143,17 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
             if (delete1.Name.ToString() != add1.Name.ToString())
             {
-                children.Add(new NameMemberAccessExpressionDiff(DiffMode.Update, index, 0, add1.Name));
-            }
-
-            if (children.Any())
-            {
-                yield return new ExpressionDiff(DiffMode.Update, index, 0, delete1, children);
+                yield return new NameMemberAccessExpressionDiff(DiffMode.Update, index, 0, add1.Name);
             }
         }
         
         private IEnumerable<Diff> MakeARecursive(int index, InvocationExpressionSyntax delete1, InvocationExpressionSyntax add1)
         {
-            var children = new List<Diff>();
+            foreach (var diff in this.triviaDiffTools.GetTriviaChildren(delete1, add1))
+            {
+                yield return diff;
+            }
+
             if (delete1.Expression.ToString() != add1.Expression.ToString())
             {
                 throw new NotImplementedException();
@@ -73,14 +161,10 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
             if (delete1.ArgumentList.ToString() != add1.ArgumentList.ToString())
             {
-                children.AddRange(this.diffTools.GetDiffOfChildrenFusion(new ArgumentDiffToolsConfig(),
-                    delete1.ArgumentList.Arguments.ToList(),
-                    add1.ArgumentList.Arguments.ToList()));
-            }
-
-            if (children.Any())
-            {
-                yield return new ExpressionDiff(DiffMode.Update, index, 0, delete1, children);
+                foreach (var diff in this.diffTools.GetDiffOfChildrenFusion(new ArgumentDiffToolsConfig(),
+                             delete1.ArgumentList.Arguments.ToList(),
+                             add1.ArgumentList.Arguments.ToList()))
+                    yield return diff;
             }
         }
 
@@ -92,13 +176,9 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         private IEnumerable<Diff> MakeARecursive(int index, ParenthesizedExpressionSyntax delete1, ParenthesizedExpressionSyntax add1)
         {
-            var children = new List<Diff>();
-
-            children.AddRange(this.MakeARecursive(index, delete1.Expression, add1.Expression, SyntaxTriviaList.Empty));
-
-            if (children.Any())
+            foreach (var diff in this.MakeARecursive(index, delete1.Expression, add1.Expression, SyntaxTriviaList.Empty))
             {
-                yield return new ExpressionDiff(DiffMode.Update, index, 0, delete1, children);
+                yield return diff;
             }
         }
 
@@ -122,66 +202,20 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         private IEnumerable<Diff> MakeARecursive(int index, BinaryExpressionSyntax delete1, BinaryExpressionSyntax add1)
         {
-            var children = new List<Diff>();
             if (delete1.OperatorToken.ToString() != add1.OperatorToken.ToString())
             {
                 throw new NotImplementedException();
             }
 
-            children.AddRange(this.MakeARecursive(0, delete1.Left, add1.Left, SyntaxTriviaList.Empty));
-            children.AddRange(this.MakeARecursive(1, delete1.Right, add1.Right, SyntaxTriviaList.Empty));
-
-            if (children.Any())
+            foreach (var diff in this.MakeARecursive(0, delete1.Left, add1.Left, SyntaxTriviaList.Empty))
             {
-                yield return new ExpressionDiff(DiffMode.Update, index, 0, delete1, children);
+                yield return diff;
             }
-        }
-    }
 
-    public class NameMemberAccessExpressionDiff : Diff<SimpleNameSyntax>
-    {
-        public NameMemberAccessExpressionDiff(DiffMode mode, int indexOfChild, int moveIndexOfChild, SimpleNameSyntax value) : base(mode, indexOfChild, moveIndexOfChild, value)
-        {
-        }
-    }
-
-    public class ArgumentDiffToolsConfig : DiffToolsConfig<ArgumentSyntax, ArgumentDiff>
-    {
-        public override int Distance(ArgumentDiff delete, ArgumentDiff add)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool CanFusion(ArgumentDiff delete, ArgumentDiff add)
-        {
-            return false;
-        }
-
-        public override ArgumentDiff CreateMove(ArgumentDiff delete, ArgumentDiff add)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool IsElementEquals(ArgumentSyntax a, ArgumentSyntax b)
-        {
-            return a.ToString() == b.ToString();
-        }
-        
-        public override Diff? MakeARecursive(ArgumentDiff delete, ArgumentDiff add)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override ArgumentDiff CreateDiff(DiffMode mode, List<ArgumentSyntax> elements, int index)
-        {
-            return new ArgumentDiff(mode, index, 0, elements[index]);
-        }
-    }
-
-    public class ArgumentDiff : Diff<ArgumentSyntax>
-    {
-        public ArgumentDiff(DiffMode mode, int indexOfChild, int moveIndexOfChild, ArgumentSyntax value) : base(mode, indexOfChild, moveIndexOfChild, value)
-        {
+            foreach (var diff in this.MakeARecursive(1, delete1.Right, add1.Right, SyntaxTriviaList.Empty))
+            {
+                yield return diff;
+            }
         }
     }
 }

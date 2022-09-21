@@ -12,8 +12,6 @@ namespace Neocra.GitMerge.Csharp
             this.separatedSyntaxList = separatedSyntaxList;
         }
 
-        public int Count => this.separatedSyntaxList.Count;
-
         public SeparatedSyntaxList<T> Insert(int index, T value)
         {
             return this.separatedSyntaxList.Insert(index, value);
@@ -22,6 +20,24 @@ namespace Neocra.GitMerge.Csharp
         public SeparatedSyntaxList<T> RemoveAt(int index)
         {
             return this.separatedSyntaxList.RemoveAt(index);
+        }
+
+        public SeparatedSyntaxList<T> Move(int index, int movedIndex)
+        {
+            var val = this.separatedSyntaxList[index];
+
+           var list =  this.separatedSyntaxList.RemoveAt(index);
+
+           if (index < movedIndex)
+           {
+               list = list.Insert(movedIndex - 1, val);
+           }
+           else
+           {
+               list = list.Insert(movedIndex, val);
+           }
+
+           return list;
         }
     }
 }

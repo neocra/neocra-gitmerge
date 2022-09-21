@@ -29,7 +29,11 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         public override VariableDeclaratorDiff CreateMove(VariableDeclaratorDiff delete, VariableDeclaratorDiff add)
         {
-            throw new NotImplementedException();
+            var children = (delete.Children ?? new List<Diff>())
+                .Union(add.Children ?? new List<Diff>())
+                .ToList();
+
+            return new VariableDeclaratorDiff(DiffMode.Move, delete.IndexOfChild, add.IndexOfChild, delete.Value, children);
         }
 
         public override bool IsElementEquals(VariableDeclaratorSyntax a, VariableDeclaratorSyntax b)
@@ -37,7 +41,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             return a.ToString() == b.ToString();
         }
 
-        public override Diff MakeARecursive(VariableDeclaratorDiff delete, VariableDeclaratorDiff add)
+        public override Diff? MakeARecursive(VariableDeclaratorDiff delete, VariableDeclaratorDiff add)
         {
             var children = new List<Diff>();
             if (delete.Value.Identifier.ToString() != add.Value.Identifier.ToString())
@@ -63,7 +67,12 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 return new VariableDeclaratorDiff(DiffMode.Update, delete.IndexOfChild, 0, delete.Value, children);
             }
 
-            throw new NotSupportedException();
+            if (delete.Value.ToFullString() != add.Value.ToFullString())
+            {
+                throw NotSupportedExceptions.Value((delete, add));
+            }
+
+            return null;
         }
 
         public override VariableDeclaratorDiff CreateDiff(DiffMode mode, List<VariableDeclaratorSyntax> elements, int index)
