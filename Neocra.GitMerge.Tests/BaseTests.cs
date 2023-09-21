@@ -6,12 +6,13 @@ using Xunit.Abstractions;
 
 namespace Neocra.GitMerge.Tests
 {
-    public class BaseTests
+    public class BaseTests : XunitContextBase
     {
         private readonly ITestOutputHelper testOutputHelper;
         private readonly string extension;
 
-        public BaseTests(ITestOutputHelper testOutputHelper, string extension = null)
+        public BaseTests(ITestOutputHelper testOutputHelper, string extension = null) 
+            : base(testOutputHelper)
         {
             this.testOutputHelper = testOutputHelper;
             this.extension = extension;
@@ -28,7 +29,6 @@ namespace Neocra.GitMerge.Tests
             var otherFile = $"{test}-other.{extension}";
             File.WriteAllText(otherFile, other);
 
-            Program.LoggerProvider = new TestOUtputHelperLoggerProvider(this.testOutputHelper);
             var result = await Program.Main(new string[]
             {
                 "merge",
@@ -38,7 +38,8 @@ namespace Neocra.GitMerge.Tests
                 ancestorFile,
                 "--other",
                 otherFile,
-                "-v"
+                "--logLevel",
+                "d"
             });
 
             Assert.Equal(1, result);
@@ -58,7 +59,6 @@ namespace Neocra.GitMerge.Tests
             var otherFile = $"{test}-other.{extension}";
             await File.WriteAllTextAsync(otherFile, other);
 
-            Program.LoggerProvider = new TestOUtputHelperLoggerProvider(this.testOutputHelper);
             var resultStatus = await Program.Main(new string[]
             {
                 "merge",
@@ -68,7 +68,8 @@ namespace Neocra.GitMerge.Tests
                 ancestorFile,
                 "--other",
                 otherFile,
-                "-v"
+                "--logLevel",
+                "d"
             });
             
             var result = await File.ReadAllTextAsync(currentFile);

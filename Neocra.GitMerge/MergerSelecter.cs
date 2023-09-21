@@ -17,7 +17,7 @@ namespace Neocra.GitMerge
             this.logger = logger;
         }
 
-        public MergeStatus Merge(MergeOptions opts)
+        public MergeStatus Merge(MergeSettings opts)
         {
             this.logger.LogInformation("Search provider for {ancestor} {current} {other} {PathName}", 
                 opts.Ancestor,

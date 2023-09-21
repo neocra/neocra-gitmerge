@@ -25,7 +25,7 @@ namespace Neocra.GitMerge.Xml
             this.diffTools = diffTools;
         }
         
-        public MergeStatus Merge(MergeOptions opts)
+        public MergeStatus Merge(MergeSettings opts)
         {
             var ancestor = this.xmlDataAccess.ReadXmlFile(opts.Ancestor);
             var current = this.xmlDataAccess.ReadXmlFile(opts.Current);
