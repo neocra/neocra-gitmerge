@@ -10,7 +10,7 @@ namespace Neocra.GitMerge.Xml
             return XDocument.Load(file, LoadOptions.PreserveWhitespace);
         }
         
-        public void SaveXmlDocument(MergeOptions opts, XDocument current)
+        public void SaveXmlDocument(MergeSettings opts, XDocument current)
         {
             var xmlTextWriter = XmlWriter.Create(opts.Current,
                 new XmlWriterSettings

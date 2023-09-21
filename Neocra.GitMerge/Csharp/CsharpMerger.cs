@@ -23,7 +23,7 @@ public class CsharpMerger : IMerger
         this.csharpApply = csharpApply;
     }
 
-    public MergeStatus Merge(MergeOptions opts)
+    public MergeStatus Merge(MergeSettings opts)
     {
         var ancestor = this.ParseFile(opts.Ancestor);
         var current = this.ParseFile(opts.Current);
