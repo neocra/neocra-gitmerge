@@ -80,19 +80,7 @@ public class CsharpMerger : IMerger
             switch (diffCurrent.Mode, diffOther.Mode)
             {
                 case (DiffMode.Update, DiffMode.Update):
-                    if (diffCurrent is IDiffChildren c1 && diffOther is IDiffChildren c2)
-                    {
-                        if (c1.Children != null && c2.Children != null)
-                        {
-                            if (DetectConflict(c1.Children, c2.Children))
-                            {
-                                return true;
-                            }
-                            
-                            c1.Children.AddRange(c2.Children);
-                            diffsOther.Remove(diffOther);
-                        }
-                    }
+                    if (this.MergeConflict(diffsOther, diffCurrent, diffOther)) return true;
                     break;
                 case (DiffMode.Delete, DiffMode.Delete):
                     diffsOther.Remove(diffOther);
@@ -105,8 +93,33 @@ public class CsharpMerger : IMerger
                 case (DiffMode.Move, DiffMode.Add):
                 case (DiffMode.Add, DiffMode.Move):
                     break;
+                case (DiffMode.Move, DiffMode.Update):
+                    if (this.MergeConflict(diffsOther, diffCurrent, diffOther)) return true;
+                    break;
+                case (DiffMode.Update, DiffMode.Move):
+                    if (this.MergeConflict(diffsCurrent, diffOther, diffCurrent)) return true;
+                    break;
                 case var value:
                     throw new NotSupportedException(value.ToString());
+            }
+        }
+
+        return false;
+    }
+
+    private bool MergeConflict(List<Diff> diffsOther, Diff diffCurrent, Diff diffOther)
+    {
+        if (diffCurrent is IDiffChildren c1 && diffOther is IDiffChildren c2)
+        {
+            if (c1.Children != null && c2.Children != null)
+            {
+                if (this.DetectConflict(c1.Children, c2.Children))
+                {
+                    return true;
+                }
+
+                c1.Children.AddRange(c2.Children);
+                diffsOther.Remove(diffOther);
             }
         }
 

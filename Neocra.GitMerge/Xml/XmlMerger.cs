@@ -225,6 +225,10 @@ namespace Neocra.GitMerge.Xml
 
                         moveIndex.Add(index, diff.MoveIndex);
                         moveIndexOfChild.Add(indexOfChild, diff.MoveIndexOfChild);
+                        if (diff.Children != null)
+                        {
+                            this.ApplyDiff2(diff.Children, xmlNamespaceResolver, xElement);
+                        }
                         break;
                     }
                     case { Mode: DiffMode.Delete, Value: XElement xElement }:
@@ -249,7 +253,7 @@ namespace Neocra.GitMerge.Xml
                         var element = parent.Nodes()
                             .OfType<XElement>()
                             .Where(n => n.Name == xElement.Name)
-                            .ElementAt(diffIndexOfChild);
+                            .ElementAt(diffIndex);
                         if (diff.Children != null)
                         {
                             this.ApplyDiff2(diff.Children, xmlNamespaceResolver, element);

@@ -52,12 +52,16 @@ namespace Neocra.GitMerge.Tools
                     // It's a move
                     yield return diffConfig.CreateMove(delete, add);
                 }
-
-                var diff = diffConfig.MakeARecursive(delete, add);
-                if (diff != null)
+                else
                 {
-                    yield return diff;
+                   var diff = diffConfig.MakeARecursive(delete, add);
+                   if (diff != null)
+                   {
+                       yield return diff;
+                   }                 
                 }
+
+
 
                 diffs.Remove(delete);
                 diffs.Remove(add);

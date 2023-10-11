@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -16,16 +17,37 @@ public class CsharpApply
         return this.ApplyOnChildren(current, diffUsing, this.ApplyOnCompilationUnitSyntax);
     }
 
-    private IMemberCombined<MemberDeclarationSyntax> GetMemberCombined(MemberDeclarationSyntax newMember)
+    private IMemberCombined<MemberDeclarationSyntax>? GetMemberCombined(MemberDeclarationSyntax newMember)
     {
         return newMember switch
         {
             ClassDeclarationSyntax c => new ClassMemberCombined(c),
             NamespaceDeclarationSyntax c => new NamespaceMemberCombined(c),
+            PropertyDeclarationSyntax c => null,
+            MethodDeclarationSyntax c => null, // TODO : Statements ?
+            ConstructorDeclarationSyntax c => null, // TODO : Statements ?
+            var d => throw NotSupportedExceptions.Value(d)
+        };
+    }
+    
+    private IList<BlockSyntax, SyntaxList<StatementSyntax>, StatementSyntax> GetMemberCombined(BlockSyntax newMember)
+    {
+        return newMember switch
+        {
+            BlockSyntax c => new BlockSyntaxCombined(c),
             var d => throw NotSupportedExceptions.Value(d)
         };
     }
         
+    private IList<VariableDeclarationSyntax, SeparatedSyntaxList<VariableDeclaratorSyntax>, VariableDeclaratorSyntax> GetMemberCombined(VariableDeclarationSyntax newMember)
+    {
+        return newMember switch
+        {
+            VariableDeclarationSyntax c => new VariableDeclarationSyntaxCombined(c),
+            var d => throw NotSupportedExceptions.Value(d)
+        };
+    }
+    
     private MemberDeclarationSyntax ApplyStatementDiffOnConstructorDeclaration(StatementDiff diff, ConstructorDeclarationSyntax current, int index)
     {
         var currentBody = current.Body;
@@ -35,7 +57,7 @@ public class CsharpApply
             return current;
         }
         
-        return current.WithBody(this.ApplyStatementDiffOnBlockSyntax(diff, currentBody, index));
+        return current.WithBody(this.ApplyStatementDiffOnBlockSyntax(diff, currentBody));
     }
 
     private MemberDeclarationSyntax ApplyStatementDiffOnMethodDeclaration(StatementDiff diff, MethodDeclarationSyntax current, int index)
@@ -47,22 +69,10 @@ public class CsharpApply
             return current;
         }
         
-        return current.WithBody(this.ApplyStatementDiffOnBlockSyntax(diff, currentBody, index));
+        return current.WithBody(this.ApplyStatementDiffOnBlockSyntax(diff, currentBody));
     }
 
-    private BlockSyntax ApplyStatementDiffOnBlockSyntax(StatementDiff diff, BlockSyntax currentBody, int index)
-    {
-        if (diff is not { Mode: DiffMode.Update })
-        {
-            return currentBody.WithStatements(this.ApplyInsertOrDeleteDiff(currentBody.Statements.To(), diff, index));
-        }
 
-        var baseMember = currentBody.Statements[diff.IndexOfChild];
-
-        var newMember = this.ApplyStatementDiffOnStatementSyntax(diff, baseMember);
-
-        return currentBody.WithStatements(currentBody.Statements.Replace(baseMember, newMember));
-    }
 
     private MemberDeclarationSyntax ApplyTokenDiffOnTypeDeclarationSyntax(TokenDiff diff, TypeDeclarationSyntax current) => this.ApplyTokenDiffOnMemberDeclarationSyntax(diff, current, current.WithCloseBraceToken, current.CloseBraceToken, current.WithOpenBraceToken, current.OpenBraceToken);
 
@@ -78,7 +88,7 @@ public class CsharpApply
             {
                 { TokenDiffEnum: TokenDiffEnum.CloseBrace } => withCloseBraceToken(this.ApplyOnChildren(nCloseBraceToken, diff.Children, this.Apply)),
                 { TokenDiffEnum: TokenDiffEnum.OpenBrace } => withOpenBraceToken(this.ApplyOnChildren(nOpenBraceToken, diff.Children, this.Apply)),
-                var d => throw NotSupportedExceptions.Value(d)
+                _ => throw NotSupportedExceptions.Value(diff)
             };
         }
 
@@ -96,7 +106,7 @@ public class CsharpApply
                         this.ApplyInsertOrDeleteDiff(new SyntaxTriviaListCombined(current.TrailingTrivia), t, index)),
                     { Type: TriviaType.Leading } => current.WithLeadingTrivia(
                         this.ApplyInsertOrDeleteDiff(new SyntaxTriviaListCombined(current.LeadingTrivia), t, index)),
-                    var x => throw NotSupportedExceptions.Value(t)
+                    _ => throw NotSupportedExceptions.Value(t)
                 };
             case var x:
                 throw NotSupportedExceptions.Value(x);
@@ -263,35 +273,98 @@ public class CsharpApply
 
         return current.WithArgumentList(current.ArgumentList.WithArguments(l));
     }
-    
-    private T2 ApplyOnMemberDeclaration<T2>(MemberDeclarationDiff memberDeclarationDiff, IMemberCombined<T2> current, int i)
+
+    private T2 ApplyOnMemberDeclaration<T2>(MemberDeclarationDiff memberDeclarationDiff, IMemberCombined<T2>? current,
+        int i)
     {
-        if (memberDeclarationDiff is not { Mode : DiffMode.Update })
+        if(current == null)
         {
-            return current.WithMembers(this.ApplyInsertOrDeleteDiff(current.Members.To(), memberDeclarationDiff, i));
+            throw NotSupportedExceptions.Value(memberDeclarationDiff);
         }
         
         var baseMember = current.Members[memberDeclarationDiff.IndexOfChild + i];
-
-        var newMember = this.ApplyOnChildren(baseMember, memberDeclarationDiff.Children, this.ApplyOnMemberDeclarationSyntax);
-
-        return current.WithMembers(current.Members.Replace(baseMember, newMember));
-    }
-    
-
-    private StatementSyntax ApplyStatementDiffOnStatementSyntax(StatementDiff diff, StatementSyntax baseMember) 
-    {
-        if(diff is not {Mode: DiffMode.Update})
+        var memberCombined = this.GetMemberCombined(baseMember);
+        var newMember2 = baseMember;
+        if (memberCombined != null)
         {
-            throw new NotImplementedException();
+            newMember2 = this.ApplyOnChildren2 (memberCombined, memberDeclarationDiff.Children
+                ?.Where(m => m.GetType() == typeof(MemberDeclarationDiff)).ToList(), this.ApplyOnMemberDeclarationSyntax,
+                this.ApplyOnChildren3);
         }
-            
-        return this.ApplyOnChildren(baseMember, diff.Children, this.ApplyOnStatementSyntax);
+        
+        newMember2 = this.ApplyOnChildren(newMember2, memberDeclarationDiff.Children
+            ?.Where(m => m.GetType() != typeof(MemberDeclarationDiff)).ToList(), this.ApplyOnMemberDeclarationSyntax);
+
+        return current.WithMembers(current.Members.Replace(baseMember, newMember2));
     }
 
-    private VariableDeclarationSyntax ApplyVariableDeclarationDiffOnVariableDeclaration(VariableDeclarationDiff diff, VariableDeclarationSyntax current)
+    private MemberDeclarationSyntax ApplyOnChildren3(MemberDeclarationSyntax arg1, List<Diff> arg2, Func<Diff, MemberDeclarationSyntax, int, MemberDeclarationSyntax> arg3)
     {
-        return this.ApplyOnChildren(current, diff.Children, this.ApplyOnVariableDeclarationSyntax);
+        var memberCombined = this.GetMemberCombined(arg1);
+        if(memberCombined != null)
+        {
+            return ApplyOnChildren2(memberCombined, arg2, arg3, this.ApplyOnChildren3);
+        }
+
+        return this.ApplyOnChildren(arg1, arg2, this.ApplyOnMemberDeclarationSyntax);
+    }
+
+
+    private T ApplyOnChildren2<T, TListChild, TChild>(
+        IList<T, TListChild, TChild> current, 
+        List<Diff>? children, 
+        Func<Diff, TChild, int, TChild> apply,
+        Func<TChild, List<Diff>, Func<Diff, TChild, int, TChild>, TChild> applyOnChildren)
+        where TListChild : IReadOnlyCollection<TChild>
+    {  
+        if (children == null || !children.Any())
+        {
+            return current.WithMembers(current.Members);
+        }
+        
+        var members = new List<(int, TChild)>();
+
+
+        for (var index = 0; index < current.Members.Count; index++)
+        {
+            var member = current.Members.ElementAt(index);
+            var diff = children.FirstOrDefault(d => d.IndexOfChild == index && d.Mode != DiffMode.Add);
+
+            if (diff == null)
+            {
+                members.Add((index * 10 + 5, member));
+                continue;
+            }
+
+            var m = member;
+            if (diff is IDiffChildren { Children: not null } diffChildren)
+            {
+                m =  applyOnChildren(m, diffChildren.Children, apply);
+            }
+
+            if (diff.Mode == DiffMode.Update)
+            {
+                members.Add((index * 10 + 5, m));
+            }
+            else if(diff.Mode == DiffMode.Move)
+            {
+                members.Add((diff.MoveIndexOfChild * 10, m));
+            }
+        }
+
+        foreach (var diff in children
+                     .Where(c=> c.Mode == DiffMode.Add)
+                     .OfType<Diff<TChild>>())
+        {
+            members.Add((diff.IndexOfChild * 10, diff.Value));
+        }
+
+        var ms = members
+            .OrderBy(l => l.Item1)
+            .Select(l => l.Item2)
+            .ToImmutableList();
+
+        return current.WithMembers(ms);
     }
 
     private StatementSyntax ApplyExpressionDiffOnExpressionStatementSyntax(ExpressionDiff expressionDiff, ExpressionStatementSyntax current)
@@ -299,7 +372,7 @@ public class CsharpApply
         return current.WithExpression(this.ApplyExpressionDiffOnExpressionSyntax(expressionDiff, current.Expression));
     }
         
-    private VariableDeclarationSyntax ApplyVariableDeclaratorDiffOnVariableDeclarationSyntax(VariableDeclaratorDiff diff, VariableDeclarationSyntax current)
+    private VariableDeclarationSyntax ApplyVariableDeclaratorDiffOnVariableDeclarationSyntax(VariableDeclaratorDiff diff, VariableDeclarationSyntax current, int index=0)
     {
         if (diff is not { Mode: DiffMode.Update })
         {
@@ -312,21 +385,23 @@ public class CsharpApply
 
         return current.WithVariables(current.Variables.Replace(baseMember, newMember));
     }
-
-    private StatementSyntax ApplyStatementDiffOnBlockStatementSyntax(StatementDiff diff, BlockSyntax current, int index)
+    
+    private StatementSyntax ApplyStatementDiffOnStatementSyntax(StatementDiff diff, StatementSyntax baseMember) 
     {
-        if (diff is not { Mode: DiffMode.Update })
+        if(diff is not {Mode: DiffMode.Update})
         {
-            return current.WithStatements(this.ApplyInsertOrDeleteDiff(current.Statements.To(), diff, index));
+            throw new NotImplementedException();
         }
-
-        var baseMember = current.Statements[diff.IndexOfChild];
-
-        var newMember = this.ApplyStatementDiffOnStatementSyntax(diff, baseMember);
-
-        return current.WithStatements(current.Statements.Replace(baseMember, newMember));
+            
+        return this.ApplyOnChildren(baseMember, diff.Children, this.ApplyOnStatementSyntax);
     }
-        
+    
+    private BlockSyntax ApplyStatementDiffOnBlockSyntax(StatementDiff diff, BlockSyntax current)
+    {
+        return this.ApplyOnChildren2 (this.GetMemberCombined(current), diff.Children, this.ApplyOnStatementSyntax,
+            this.ApplyOnChildren);
+    }
+    
     private TCollection ApplyInsertOrDeleteDiff<T, TCollection>(
         ISyntaxList<T, TCollection>  syntaxList, 
         Diff<T> syntax,
@@ -338,19 +413,16 @@ public class CsharpApply
         {
             DiffMode.Add => syntaxList.Insert(syntaxIndexOfChild, syntaxValue),
             DiffMode.Delete => syntaxList.RemoveAt(syntaxIndexOfChild),
-            DiffMode.Move=> syntaxList.Move(syntaxIndexOfChild, syntax.MoveIndexOfChild),
             var value => throw NotSupportedExceptions.Value(value)
         };
     }
     
-    private ExpressionSyntax ApplyOnExpressionSyntax(Diff child, ExpressionSyntax current, int index)
+    private ExpressionSyntax ApplyOnExpressionSyntax(Diff child, ExpressionSyntax current, int index = 0)
     {
         return (child, current) switch
         {
             (ExpressionDiff d, ParenthesizedExpressionSyntax m) => m.WithExpression(this.ApplyExpressionDiffOnExpressionSyntax(d, m.Expression)),
-            (ExpressionDiff d, ExpressionSyntax m) => this.ApplyExpressionDiffOnExpressionSyntax(d, m),
             (AssignmentExpressionDiff d, AssignmentExpressionSyntax m) => this.ApplyAssignmentExpressionDiffOnExpressionSyntax(d, m),
-            (AssignmentExpressionDiff d, InvocationExpressionSyntax m) => this.ApplyAssignmentExpressionDiffOnInvocationExpressionSyntax(d, m, index),
             (ArgumentDiff d, InvocationExpressionSyntax m) => this.ApplyArgumentDiffOnInvocationExpressionSyntax(d, m, index),
             (NameMemberAccessExpressionDiff d, MemberAccessExpressionSyntax m) => m.WithName(d.Value),
             (ExpressionBodyDiff d, ParenthesizedLambdaExpressionSyntax m) => this.ApplyExpressionBodyDiffOnParenthesizedLambdaExpressionSyntax(d, m),
@@ -360,25 +432,7 @@ public class CsharpApply
 
     private ExpressionSyntax ApplyExpressionBodyDiffOnParenthesizedLambdaExpressionSyntax(ExpressionBodyDiff diff, ParenthesizedLambdaExpressionSyntax current)
     {
-        if (diff.Mode == DiffMode.Add)
-        {
-            return diff.Value;
-        }
-            
-        if (diff.Mode == DiffMode.Update)
-        {
-            if (diff.Children == null)
-            {
-                throw NotSupportedExceptions.Value(current);
-            }
-
-            return ApplyOnChildren(current, diff.Children, ApplyOnExpressionSyntax);
-        }
-
-        return current switch
-        {
-            var value => throw NotSupportedExceptions.Value(value)
-        };
+        return ApplyOnChildren(current, diff.Children, ApplyOnExpressionSyntax);
     }
 
     private ParenthesizedLambdaExpressionSyntax ApplyOnExpressionSyntax(Diff child, ParenthesizedLambdaExpressionSyntax current, int index)
@@ -392,11 +446,6 @@ public class CsharpApply
 
     private ParenthesizedLambdaExpressionSyntax ApplyExpressionDiffOnParenthesizedLambdaExpressionSyntax(ExpressionDiff diff, ParenthesizedLambdaExpressionSyntax current)
     {
-        if (diff.Mode == DiffMode.Add)
-        {
-            return current.WithBody(diff.Value);
-        }
-            
         if (diff.Mode == DiffMode.Update)
         {
             if (diff.Children == null)
@@ -413,49 +462,12 @@ public class CsharpApply
         };
     }
 
-    private ExpressionSyntax ApplyAssignmentExpressionDiffOnInvocationExpressionSyntax(AssignmentExpressionDiff expressionDiff, InvocationExpressionSyntax current, int index)
-    {
-        if (expressionDiff.Mode == DiffMode.Add)
-        {
-            return expressionDiff.Value;
-        }
-            
-        if (expressionDiff.Mode == DiffMode.Update)
-        {
-            if (expressionDiff.Children == null)
-            {
-                throw NotSupportedExceptions.Value(current);
-            }
-                
-            foreach (var child in expressionDiff.Children)
-            {
-                current = expressionDiff.AssignmentExpressionDiffMode switch
-                {
-                    var value => throw NotSupportedExceptions.Value(value)
-                };
-            }
-
-            if (current == null)
-            {
-                throw new NotSupportedException();
-            }
-
-            return current;
-        }
-
-        return current switch
-        {
-            var value => throw NotSupportedExceptions.Value(value)
-        };
-    }
-
     private MemberDeclarationSyntax ApplyOnMemberDeclarationSyntax(Diff child, MemberDeclarationSyntax newMember, int index)
     {
         return (child, newMember) switch
         {
             (StatementDiff d, MethodDeclarationSyntax m) => this.ApplyStatementDiffOnMethodDeclaration(d, m, index),
             (StatementDiff d, ConstructorDeclarationSyntax m) => this.ApplyStatementDiffOnConstructorDeclaration(d, m, index),
-            (MemberDeclarationDiff d, { } m) =>  this.ApplyOnMemberDeclaration(d, this.GetMemberCombined(m), index),
             (MethodReturnTypeDiff d, MethodDeclarationSyntax methodDeclarationSyntax) => methodDeclarationSyntax.WithReturnType(d.Value),
             (EqualsValueClauseDiff d, PropertyDeclarationSyntax propertyDeclarationSyntax) => this.ApplyEqualsValueClauseDiffOnPropertyDeclaration(d, propertyDeclarationSyntax),
             (SemicolonTokenDiff d, PropertyDeclarationSyntax propertyDeclarationSyntax) => this.ApplySemicolonTokenDiffOnPropertyDeclaration(d, propertyDeclarationSyntax),
@@ -465,37 +477,49 @@ public class CsharpApply
             var d => throw NotSupportedExceptions.Value(d)
         };
     }
-        
+    
     private StatementSyntax ApplyOnStatementSyntax(Diff child, StatementSyntax newMember, int index = 0)
     {
         return (child, newMember) switch
         {
             (StatementDiff b, IfStatementSyntax ifStatementSyntax) => ifStatementSyntax.WithStatement(this.ApplyStatementDiffOnStatementSyntax(b, ifStatementSyntax.Statement)),
-            (StatementDiff b, BlockSyntax blockSyntax) => this.ApplyStatementDiffOnBlockStatementSyntax(b, blockSyntax, index),
             (VariableDeclarationDiff d, LocalDeclarationStatementSyntax ifStatementSyntax) => ifStatementSyntax.WithDeclaration(this.ApplyVariableDeclarationDiffOnVariableDeclaration(d, ifStatementSyntax.Declaration)),
-            (VariableDeclarationTypeDiff d, LocalDeclarationStatementSyntax syntax) => syntax.WithDeclaration(syntax.Declaration.WithType(d.DeclarationType)),
-            (ExpressionDiff d, ReturnStatementSyntax m) => this.ApplyExpressionDiffOnReturnStatement(d, m),
             (ExpressionDiff b, ExpressionStatementSyntax s)=> this.ApplyExpressionDiffOnExpressionStatementSyntax(b, s),
+            (StatementDiff d, BlockSyntax m) => this.ApplyStatementDiffOnBlockSyntax(d, m),
+            (StatementDiff d, ReturnStatementSyntax m) => ApplyOnChildren(newMember, d.Children, ApplyOnStatementSyntax),
+            (ExpressionDiff d, ReturnStatementSyntax m) => this.ApplyExpressionDiffOnReturnStatement(d, m),
             var d => throw NotSupportedExceptions.Value(d)
         };
     }
-
-    private VariableDeclaratorSyntax ApplyOnVariableDeclaratorSyntax(Diff child, VariableDeclaratorSyntax current, int index = 0)
+    private VariableDeclarationSyntax ApplyVariableDeclarationDiffOnVariableDeclaration(VariableDeclarationDiff diff, VariableDeclarationSyntax current)
     {
-        return (child, current) switch
-        {
-            (ExpressionDiff d, VariableDeclaratorSyntax m) => m.Initializer == null ? m : m.WithInitializer(m.Initializer.WithValue(this.ApplyExpressionDiffOnExpressionSyntax(d, m.Initializer.Value))),
-            (IdentifierDiff d, VariableDeclaratorSyntax m) => m.WithIdentifier(d.Value),
-            var d => throw NotSupportedExceptions.Value(d)
-        };
-    }
+        var m = current;
+
+        m = ApplyOnChildren2(
+            this.GetMemberCombined(m),
+            diff.Children.OfType<VariableDeclaratorDiff>().Cast<Diff>().ToList(),
+            ApplyOnVariableDeclaratorSyntax,
+            this.ApplyOnChildren);
         
+        return this.ApplyOnChildren(m, diff.Children
+            .Where(d=> d.GetType() != typeof(VariableDeclaratorDiff)).ToList(), this.ApplyOnVariableDeclarationSyntax);
+    }
+            
     private VariableDeclarationSyntax ApplyOnVariableDeclarationSyntax(Diff child, VariableDeclarationSyntax newMember, int index = 0)
     {
         return (child, newMember) switch
         {
             (VariableDeclaratorDiff d, VariableDeclarationSyntax m) =>  this.ApplyVariableDeclaratorDiffOnVariableDeclarationSyntax(d, m) , 
             (VariableDeclarationTypeDiff d, VariableDeclarationSyntax m) => m.WithType(d.DeclarationType),
+            var d => throw NotSupportedExceptions.Value(d)
+        };
+    }
+    private VariableDeclaratorSyntax ApplyOnVariableDeclaratorSyntax(Diff child, VariableDeclaratorSyntax current, int index = 0)
+    {
+        return (child, current) switch
+        {
+            (ExpressionDiff d, VariableDeclaratorSyntax m) => m.Initializer == null ? m : m.WithInitializer(m.Initializer.WithValue(this.ApplyExpressionDiffOnExpressionSyntax(d, m.Initializer.Value))),
+            (IdentifierDiff d, VariableDeclaratorSyntax m) => m.WithIdentifier(d.Value),
             var d => throw NotSupportedExceptions.Value(d)
         };
     }
@@ -553,5 +577,27 @@ public class CsharpApply
         }
 
         return current;
+    }
+}
+
+internal class VariableDeclarationSyntaxCombined : IList<VariableDeclarationSyntax,SeparatedSyntaxList<VariableDeclaratorSyntax>,VariableDeclaratorSyntax>
+{
+    private readonly VariableDeclarationSyntax variableDeclarationSyntax;
+
+    public VariableDeclarationSyntaxCombined(VariableDeclarationSyntax variableDeclarationSyntax)
+    {
+        this.variableDeclarationSyntax = variableDeclarationSyntax;
+    }
+
+    public SeparatedSyntaxList<VariableDeclaratorSyntax> Members => this.variableDeclarationSyntax.Variables;
+    public VariableDeclarationSyntax WithMembers(SeparatedSyntaxList<VariableDeclaratorSyntax> members)
+    {
+        return this.variableDeclarationSyntax.WithVariables(members);
+    }
+
+    public VariableDeclarationSyntax WithMembers(IEnumerable<VariableDeclaratorSyntax> members)
+    {
+        return variableDeclarationSyntax.WithVariables(new SeparatedSyntaxList<VariableDeclaratorSyntax>()
+            .AddRange(members));
     }
 }

@@ -79,12 +79,16 @@ namespace Neocra.GitMerge.Xml
             this.ParentPath = parentPath;
         }
 
-        public XmlDiff(DiffMode mode, int index, XObject value, string parentPath, List<XmlDiff> children) 
-            : base(mode, index, 0)
+        public XmlDiff(DiffMode mode, int index, int indexOfChild, XObject value, string parentPath,
+            List<XmlDiff> children,
+            int moveIndex, int moveIndexOfChild) 
+            : base(mode, indexOfChild, moveIndexOfChild)
         {
+            this.Index = index;
             this.ParentPath = parentPath;
             this.Children = children;
             this.Value = value;
+            this.MoveIndex = moveIndex;
         }
 
         public string ToString(XmlNamespaceManager xmlNamespaceResolver, int index, int moveIndex, int indexChild, int moveIndexChild)

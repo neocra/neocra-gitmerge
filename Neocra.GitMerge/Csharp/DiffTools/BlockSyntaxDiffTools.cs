@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Neocra.GitMerge.Csharp.Diffs;
 using Neocra.GitMerge.Tools;
 
 namespace Neocra.GitMerge.Csharp.DiffTools;
@@ -26,9 +27,9 @@ public class BlockSyntaxDiffTools
             delete1.Statements.ToList(),
             add1.Statements.ToList()).ToList();
 
-        foreach (var child in children)
+        if (children.Any())
         {
-            yield return child;
+            yield return new StatementDiff(DiffMode.Update, index, index, delete1, children);
         }
     }
 }

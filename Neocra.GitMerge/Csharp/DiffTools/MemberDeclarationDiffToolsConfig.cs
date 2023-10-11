@@ -29,8 +29,8 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             {
                 (ClassDeclarationSyntax delete1, ClassDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
                 (NamespaceDeclarationSyntax delete1, NamespaceDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
-                (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
-                (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
+                (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => Math.Min(StringTools.Compute(delete1.ToString().Replace(delete1.Body?.ToString() ?? String.Empty, ""), add1.ToString().Replace(add1.Body?.ToString() ?? String.Empty, "")),StringTools.Compute(delete1.ToString(), add1.ToString())),
+                (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => StringTools.Compute(delete1.Identifier.ToString(), add1.Identifier.ToString()),
                 (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
                 var v => throw NotSupportedExceptions.Value(v)
             };
@@ -58,11 +58,8 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         public override MemberDeclarationDiff CreateMove(MemberDeclarationDiff delete, MemberDeclarationDiff add)
         {
-            var children = (delete.Children ?? new List<Diff>())
-                .Union(add.Children ?? new List<Diff>())
-                .ToList();
+            return this.InternalMakeARecursive(DiffMode.Move, delete, add, add.IndexOfChild) ?? throw new InvalidOperationException();
 
-            return new MemberDeclarationDiff(DiffMode.Move, delete.IndexOfChild, add.IndexOfChild, delete.Value, children);
         }
 
         public override bool IsElementEquals(MemberDeclarationSyntax a, MemberDeclarationSyntax b)
@@ -72,19 +69,29 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
         public override Diff? MakeARecursive(MemberDeclarationDiff delete, MemberDeclarationDiff add)
         {
+            return this.InternalMakeARecursive(DiffMode.Update, delete, add, 0);
+        }
+
+        private MemberDeclarationDiff? InternalMakeARecursive(DiffMode diffMode, MemberDeclarationDiff delete, MemberDeclarationDiff add, int moveIndexOfChild)
+        {
             var children = ((delete.Value, add.Value) switch
             {
-                (ClassDeclarationSyntax delete1, ClassDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
-                (NamespaceDeclarationSyntax delete1, NamespaceDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
-                (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
-                (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
-                (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild, delete1, add1),
+                (ClassDeclarationSyntax delete1, ClassDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild,
+                    delete1, add1),
+                (NamespaceDeclarationSyntax delete1, NamespaceDeclarationSyntax add1) => this.MakeARecursive(
+                    delete.IndexOfChild, delete1, add1),
+                (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild,
+                    delete1, add1),
+                (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => this.MakeARecursive(delete.IndexOfChild,
+                    delete1, add1),
+                (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => this.MakeARecursive(
+                    delete.IndexOfChild, delete1, add1),
                 var v => throw NotSupportedExceptions.Value(v)
             }).ToList();
 
-            if (children.Any())
+            if (children.Any() || diffMode == DiffMode.Move)
             {
-                return new MemberDeclarationDiff(DiffMode.Update, delete.IndexOfChild, 0, delete.Value, children);
+                return new MemberDeclarationDiff(diffMode, delete.IndexOfChild, moveIndexOfChild, delete.Value, children);
             }
 
             return null;
@@ -244,12 +251,14 @@ namespace Neocra.GitMerge.Csharp.DiffTools
 
             if (delete.Body != null && add.Body != null)
             {
-                foreach (var d in this.diffTools.GetDiffOfChildrenFusion(
+                var d = this.diffTools.GetDiffOfChildrenFusion(
                              new StatementDiffToolsConfig(this.diffTools),
                              delete.Body.Statements.ToList(),
-                             add.Body.Statements.ToList()))
+                             add.Body.Statements.ToList())
+                            .ToList();
+                if (d.Any())
                 {
-                    yield return d;
+                    yield return new StatementDiff(DiffMode.Update, index, 0, delete.Body, d);
                 }
             }
         }

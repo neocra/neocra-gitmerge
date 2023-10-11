@@ -1,12 +1,21 @@
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Neocra.GitMerge.Csharp
 {
-    public interface IMemberCombined<out TParent> 
+    public interface IMemberCombined<out TParent> : IList<TParent, SyntaxList<MemberDeclarationSyntax>, MemberDeclarationSyntax>
     {
-        SyntaxList<MemberDeclarationSyntax> Members { get; }
+        
+    }
 
-        TParent WithMembers(SyntaxList<MemberDeclarationSyntax> members);
+    public interface IList<out TParent, TListChild, TChild>
+        where TListChild: IReadOnlyCollection<TChild>
+    {
+        TListChild Members { get; }
+
+        TParent WithMembers(TListChild members);
+        
+        TParent WithMembers(IEnumerable<TChild> members);
     }
 }

@@ -11,7 +11,7 @@ namespace Neocra.GitMerge.Tests
         {
         }
 
-        [Fact]
+        [FactDisplay]
         public async Task Should_do_nothing_When_merge_root_node_with_attribute()
         {
             await this.Merge(
@@ -21,7 +21,7 @@ namespace Neocra.GitMerge.Tests
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Project ToolsVersion=\"4.0\" DefaultTargets=\"Build\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\"></Project>");
         }
 
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_When_use_xmlns()
         {
             await this.Merge(
@@ -31,7 +31,7 @@ namespace Neocra.GitMerge.Tests
                 "<Project xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\"><node1 att=\"val2\"></node1></Project>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_delete_line_When_use_xmlns()
         {
             await this.Merge(
@@ -113,7 +113,7 @@ namespace Neocra.GitMerge.Tests
 </Project>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_fix_with_up_version_When_conflict_merge_on_version()
         {
             await this.Merge(
@@ -139,7 +139,7 @@ namespace Neocra.GitMerge.Tests
 </Project>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_fix_with_a_version_When_conflict_merge_same_version()
         {
             await this.Merge(

@@ -86,7 +86,13 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 delete1.AttributeLists.ToList(),
                 add1.AttributeLists.ToList())) yield return d;
 
-            foreach (var d in expressionDiffToolsConfig.MakeARecursive(index, delete1.Expression, add1.Expression, add1.ReturnKeyword.TrailingTrivia)) yield return d;
+            var childdren = expressionDiffToolsConfig.MakeARecursive(index, delete1.Expression, add1.Expression,
+                add1.ReturnKeyword.TrailingTrivia).ToList();
+            if (childdren.Any())
+            {
+                yield return new StatementDiff(DiffMode.Update, index, 0, delete1, children: childdren);
+            }
+            // yield return d;
         }
 
         private IEnumerable<Diff> MakeARecursive(int index, IfStatementSyntax delete1, IfStatementSyntax add1)
