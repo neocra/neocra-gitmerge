@@ -12,7 +12,7 @@ namespace Neocra.GitMerge.Tests
         {
         }
 
-        [Fact]
+        [FactDisplay]
         public async Task Should_preserve_white_space_When_merge_two_xml_file()
         {
             await this.Merge(
@@ -22,7 +22,7 @@ namespace Neocra.GitMerge.Tests
                 "<root>\n    <node1></node1>\n</root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_preserve_text_When_merge_two_xml_file()
         {
             await this.Merge(
@@ -32,7 +32,7 @@ namespace Neocra.GitMerge.Tests
                 "<root>A<node1 />B<node1 />C</root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_preserve_order_When_merge_two_xml_file()
         {
             await this.Merge(
@@ -42,7 +42,7 @@ namespace Neocra.GitMerge.Tests
                 "<root><node1 att=\"val1\" /><node1 att=\"val2\" /></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_remove_the_second_node1_When_merge_two_xml_file()
         {
             await this.Merge(
@@ -52,7 +52,7 @@ namespace Neocra.GitMerge.Tests
                 "<root><node2 /><node1 att=\"val1\" /></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_remove_the_second_node1_When_merge_two_xml_file_and_sub_node()
         {
             await this.Merge(
@@ -62,7 +62,7 @@ namespace Neocra.GitMerge.Tests
                 "<root><sub1 /><sub><node2 /><node1 att=\"val1\" /></sub></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_are_same()
         {
             await this.Merge(
@@ -72,7 +72,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_other_add_node()
         {
             await this.Merge(
@@ -82,7 +82,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node1></node1></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_other_remove_node()
         {
             await this.Merge(
@@ -92,7 +92,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node2></node2></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_element_is_changed()
         {
             await this.Merge(
@@ -102,7 +102,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node2></node2></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_element_is_add_in_current()
         {
             await this.Merge(
@@ -112,7 +112,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node1></node1></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_element_is_add_in_other_with_another_element()
         {
             await this.Merge(
@@ -122,7 +122,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node2></node2><node1></node1></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_merge_two_xml_file_When_element_is_add_in_other_on_nested()
         {
             await this.Merge(
@@ -132,7 +132,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node1><subnode2></subnode2><subnode1></subnode1></node1></root>");
         }
 
-        [Fact]
+        [FactDisplay]
         public async Task Should_change_attribute_value_When_merge_node_with_attribute()
         {
             await this.Merge(
@@ -142,7 +142,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node1 att1=""val1"" att2=""val1""></node1></root>");
         }
 
-        [Fact]
+        [FactDisplay]
         public async Task Should_get_order_of_attribute_value_When_merge_node_with_attribute()
         {
             await this.Merge(
@@ -152,7 +152,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node1 att1=""val2"" att2=""val1""></node1></root>");
         }
 
-        [Fact]
+        [FactDisplay]
         public async Task Should_remove_two_node_When_merge_with_multi_node()
         {
             await this.Merge(
@@ -162,7 +162,7 @@ namespace Neocra.GitMerge.Tests
             @"<root><node att=""1"" /><node att=""3"" /><node att=""5"" /></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_remove_nodes_and_update_attribute_on_another_When_merge_with_multi_node()
         {
             await this.Merge(
@@ -172,7 +172,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root>\n<node att=""3"" v=""val4"" />\n</root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_remove_four_node_When_have_two_node_name_different_and_merge_with_multi_node()
         {
             await this.Merge(
@@ -182,7 +182,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node att=""1"" /><node att=""3"" /><node att=""5"" /><node2 att=""1"" /><node2 att=""3"" /><node2 att=""5"" /></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_remove_one_node_and_add_another_When_merge_with_multi_node()
         {
             await this.Merge(
@@ -192,7 +192,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node att=""1"" /><node att=""3"" /><node att=""6"" /><node att=""5"" /></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_conflict_When_merge_files_with_a_modification_on_same_attribute()
         {
             await this.MergeConflict(
@@ -201,7 +201,7 @@ namespace Neocra.GitMerge.Tests
                 @"<root><node att=""3"" /></root>");
         }
         
-        [Fact]
+        [FactDisplay]
         public async Task Should_do_not_conflict_When_merge_files_with_a_delete_on_each_files()
         {
             await this.Merge(

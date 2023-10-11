@@ -35,13 +35,7 @@ namespace Neocra.GitMerge.Xml
 
         public override XmlDiff CreateMove(XmlDiff delete, XmlDiff add)
         {
-            return new XmlDiff(DiffMode.Move,
-                (XElement)delete.Value,
-                delete.ParentPath,
-                delete.Index,
-                delete.IndexOfChild,
-                add.Index,
-                add.IndexOfChild);
+            return this.MakeADiff(delete, add, DiffMode.Move) ?? throw new InvalidOperationException();
         }
 
         public override bool IsElementEquals(XNode a, XNode b)
@@ -80,21 +74,27 @@ namespace Neocra.GitMerge.Xml
 
         public override Diff? MakeARecursive(XmlDiff delete, XmlDiff add)
         {
+            return this.MakeADiff(delete, add, DiffMode.Update);
+        }
+
+        private XmlDiff? MakeADiff(XmlDiff delete, XmlDiff add, DiffMode diffMode)
+        {
             if (delete.Value is XElement && add.Value is XElement)
             {
-                var children = this.xmlMerger.Diff(this.xmlNamespaceResolver, (XElement)delete.Value, (XElement)add.Value, delete.ParentPath, delete.Index)
+                var children = this.xmlMerger.Diff(this.xmlNamespaceResolver, (XElement)delete.Value, (XElement)add.Value,
+                        delete.ParentPath, delete.Index)
                     .ToList();
 
-                if (children.Count > 0)
+                if (children.Count > 0 || diffMode == DiffMode.Move)
                 {
-                    return new XmlDiff(DiffMode.Update, delete.Index, delete.Value, this.path, children);
+                    return new XmlDiff(diffMode, delete.Index, delete.IndexOfChild, delete.Value, this.path, children, add.Index, add.IndexOfChild);
                 }
 
                 return null;
             }
             else if (delete.Value is XText && add.Value is XText text)
             {
-                return new XmlDiff(DiffMode.Update, text, this.path, delete.Index, delete.IndexOfChild);
+                return new XmlDiff(diffMode, text, this.path, delete.Index, delete.IndexOfChild, add.Index, add.IndexOfChild);
             }
 
             throw NotSupportedExceptions.Value((delete, add));
