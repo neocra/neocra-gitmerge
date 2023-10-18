@@ -353,5 +353,36 @@ namespace Neocra.GitMerge.Tests
                 "public class Class1{ private int _f;private int _g; public Class1() { _f = 12345679;_g = 12;}}",
                 "public class Class1{ private int _f;private int _g; public Class1() { _f = 12;_g = 134567;}}");
         }
+        
+        [FactDisplay]
+        public async Task Should_merge_When_have_a_file_scope_namespace()
+        {
+            await this.Merge(
+                "namespace Name1;\npublic class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    }\n}",
+                "namespace Name1;\npublic class Class1\n{\n    public void Method()\n    {\n    }\n}",
+                "namespace Name1;\npublic class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    var b = 3;\n    }\n}",
+                "namespace Name1;\npublic class Class1\n{\n    public void Method()\n    {\n    var b = 3;\n    }\n}");
+        }
+        
+        [FactDisplay]
+        public async Task Should_merge_When_have_a_rename_file_scope_namespace()
+        {
+            await this.Merge(
+                "namespace Name1;\npublic class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    }\n}",
+                "namespace Name2;\npublic class Class1\n{\n    public void Method()\n    {\n    }\n}",
+                "namespace Name1;\npublic class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    var b = 3;\n    }\n}",
+                "namespace Name2;\npublic class Class1\n{\n    public void Method()\n    {\n    var b = 3;\n    }\n}");
+        }
+        
+                
+        [FactDisplay]
+        public async Task Should_merge_When_have_a_rename_namespace()
+        {
+            await this.Merge(
+                "namespace Name1\n{\npublic class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    }\n}\n]",
+                "namespace Name2\n{\npublic class Class1\n{\n    public void Method()\n    {\n    }\n}\n]",
+                "namespace Name1\n{\npublic class Class1\n{\n    public void Method()\n    {\n    var i = 1;\n    var a = 2;\n    var b = 3;\n    }\n}\n]",
+                "namespace Name2\n{\npublic class Class1\n{\n    public void Method()\n    {\n    var b = 3;\n    }\n}\n]");
+        }
     }
 }

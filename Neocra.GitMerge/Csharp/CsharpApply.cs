@@ -23,6 +23,7 @@ public class CsharpApply
         {
             ClassDeclarationSyntax c => new ClassMemberCombined(c),
             NamespaceDeclarationSyntax c => new NamespaceMemberCombined(c),
+            FileScopedNamespaceDeclarationSyntax c => new FileScopedNamespaceMemberCombined(c),
             PropertyDeclarationSyntax c => null,
             MethodDeclarationSyntax c => null, // TODO : Statements ?
             ConstructorDeclarationSyntax c => null, // TODO : Statements ?
@@ -424,7 +425,7 @@ public class CsharpApply
             (ExpressionDiff d, ParenthesizedExpressionSyntax m) => m.WithExpression(this.ApplyExpressionDiffOnExpressionSyntax(d, m.Expression)),
             (AssignmentExpressionDiff d, AssignmentExpressionSyntax m) => this.ApplyAssignmentExpressionDiffOnExpressionSyntax(d, m),
             (ArgumentDiff d, InvocationExpressionSyntax m) => this.ApplyArgumentDiffOnInvocationExpressionSyntax(d, m, index),
-            (NameMemberAccessExpressionDiff d, MemberAccessExpressionSyntax m) => m.WithName(d.Value),
+            (NameMemberAccessExpressionDiff {Value: SimpleNameSyntax value}, MemberAccessExpressionSyntax m) => m.WithName(value),
             (ExpressionBodyDiff d, ParenthesizedLambdaExpressionSyntax m) => this.ApplyExpressionBodyDiffOnParenthesizedLambdaExpressionSyntax(d, m),
             var value => throw NotSupportedExceptions.Value(value)
         };
@@ -474,6 +475,7 @@ public class CsharpApply
             (AccessorListDiff d, PropertyDeclarationSyntax propertyDeclarationSyntax) => this.ApplyAccessorListSyntaxOnPropertyDeclaration(d, propertyDeclarationSyntax),
             (TokenDiff diff, NamespaceDeclarationSyntax d) => this.ApplyTokenDiffOnNamespaceDeclarationSyntax(diff, d),
             (TokenDiff diff, ClassDeclarationSyntax d) => this.ApplyTokenDiffOnTypeDeclarationSyntax(diff, d),
+            (NameMemberAccessExpressionDiff diff, BaseNamespaceDeclarationSyntax d) => d.WithName(diff.Value),
             var d => throw NotSupportedExceptions.Value(d)
         };
     }
@@ -577,6 +579,27 @@ public class CsharpApply
         }
 
         return current;
+    }
+}
+
+internal class FileScopedNamespaceMemberCombined : IMemberCombined<MemberDeclarationSyntax>
+{
+    private readonly FileScopedNamespaceDeclarationSyntax fileScopedNamespaceDeclarationSyntax;
+
+    public FileScopedNamespaceMemberCombined(FileScopedNamespaceDeclarationSyntax fileScopedNamespaceDeclarationSyntax)
+    {
+        this.fileScopedNamespaceDeclarationSyntax = fileScopedNamespaceDeclarationSyntax;
+    }
+
+    public SyntaxList<MemberDeclarationSyntax> Members => fileScopedNamespaceDeclarationSyntax.Members;
+    public MemberDeclarationSyntax WithMembers(SyntaxList<MemberDeclarationSyntax> members)
+    {
+        return fileScopedNamespaceDeclarationSyntax.WithMembers(members);
+    }
+
+    public MemberDeclarationSyntax WithMembers(IEnumerable<MemberDeclarationSyntax> members)
+    {
+        return fileScopedNamespaceDeclarationSyntax.WithMembers(new SyntaxList<MemberDeclarationSyntax>(members));
     }
 }
 
