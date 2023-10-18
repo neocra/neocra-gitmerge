@@ -32,6 +32,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 (MethodDeclarationSyntax delete1, MethodDeclarationSyntax add1) => Math.Min(StringTools.Compute(delete1.ToString().Replace(delete1.Body?.ToString() ?? String.Empty, ""), add1.ToString().Replace(add1.Body?.ToString() ?? String.Empty, "")),StringTools.Compute(delete1.ToString(), add1.ToString())),
                 (PropertyDeclarationSyntax delete1, PropertyDeclarationSyntax add1) => StringTools.Compute(delete1.Identifier.ToString(), add1.Identifier.ToString()),
                 (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
+                (FileScopedNamespaceDeclarationSyntax delete1, FileScopedNamespaceDeclarationSyntax add1) => StringTools.Compute(delete1.ToString(), add1.ToString()),
                 var v => throw NotSupportedExceptions.Value(v)
             };
         }
@@ -52,6 +53,7 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                 (FieldDeclarationSyntax, FieldDeclarationSyntax) => false,
                 (FieldDeclarationSyntax, _) => false,
                 (_, FieldDeclarationSyntax) => false,
+                (FileScopedNamespaceDeclarationSyntax, FileScopedNamespaceDeclarationSyntax) => true,
                 var v => throw NotSupportedExceptions.Value(v)
             };
         }
@@ -86,6 +88,8 @@ namespace Neocra.GitMerge.Csharp.DiffTools
                     delete1, add1),
                 (ConstructorDeclarationSyntax delete1, ConstructorDeclarationSyntax add1) => this.MakeARecursive(
                     delete.IndexOfChild, delete1, add1),
+                (FileScopedNamespaceDeclarationSyntax delete1, FileScopedNamespaceDeclarationSyntax add1) => this.MakeARecursive(
+                    delete.IndexOfChild, delete1, add1),
                 var v => throw NotSupportedExceptions.Value(v)
             }).ToList();
 
@@ -95,6 +99,24 @@ namespace Neocra.GitMerge.Csharp.DiffTools
             }
 
             return null;
+        }
+
+        private List<Diff> MakeARecursive(int deleteIndexOfChild, FileScopedNamespaceDeclarationSyntax delete, FileScopedNamespaceDeclarationSyntax add)
+        {
+            var children = this.triviaDiffTools.GetTriviaChildren(delete, add);
+
+            if(delete.Name.ToFullString() != add.Name.ToFullString())
+            {
+                children.Add(new NameMemberAccessExpressionDiff(DiffMode.Update, deleteIndexOfChild, 0, add.Name));
+            }
+            
+            
+            children.AddRange(this.diffTools.GetDiffOfChildrenFusion(
+                new MemberDeclarationDiffToolsConfig(this.diffTools),
+                delete.Members.ToList(),
+                add.Members.ToList()));
+
+            return children;
         }
 
         private IEnumerable<Diff> MakeARecursive(int index, ConstructorDeclarationSyntax delete, ConstructorDeclarationSyntax add)
@@ -266,6 +288,11 @@ namespace Neocra.GitMerge.Csharp.DiffTools
         private List<Diff> MakeARecursive(int index, NamespaceDeclarationSyntax delete, NamespaceDeclarationSyntax add)
         {
             var children = this.triviaDiffTools.GetTriviaChildren(delete, add);
+
+            if(delete.Name.ToFullString() != add.Name.ToFullString())
+            {
+                children.Add(new NameMemberAccessExpressionDiff(DiffMode.Update, index, 0, add.Name));
+            }
 
             children.AddRange(this.GetTokenDiff(TokenDiffEnum.CloseBrace, delete.CloseBraceToken, add.CloseBraceToken));
             children.AddRange(this.GetTokenDiff(TokenDiffEnum.OpenBrace, delete.OpenBraceToken, add.OpenBraceToken));
